@@ -2,5 +2,6 @@
 bin/
 obj/
 
-# Ignore layout files
+# Ignore User Specific CodeBlocks Files
 *.layout
+*.depend

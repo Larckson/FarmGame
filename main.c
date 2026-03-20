@@ -1,12 +1,14 @@
-#include "utils.c"
 #include "adjustfarmsetup.c"
+
+extern unsigned long print_time();
+extern void srandom(unsigned long seed);
 
 int main() {
     int year;
     int money=50;
     struct crop* crops=create_initial_crops();
     struct farm* farms=add_farm(NULL);
-    srand(time(NULL));
+    srandom(print_time());
 
     for (year=1800;year<1900;year++) {
         printf("Year: %d\n",year);

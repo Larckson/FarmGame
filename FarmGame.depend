@@ -1,0 +1,12 @@
+# depslib dependency file v1.0
+1773965159 source:c:\users\a\documents\c-games\farmgame\main.c
+	"adjustfarmsetup.c"
+
+1773965146 c:\users\a\documents\c-games\farmgame\adjustfarmsetup.c
+	"initfarmsetup.c"
+
+1773964853 c:\users\a\documents\c-games\farmgame\initfarmsetup.c
+	<stdio.h>
+
+1773960474 source:c:\users\a\documents\c-games\farmgame\utils.asm
+

@@ -1,18 +1,19 @@
 #ifndef ADJUSTFARMSETUP
 #define ADJUSTFARMSETUP
 
-#include <time.h>
 #include "initfarmsetup.c"
+
+extern unsigned long random(void);
 
 void update_crop_prices(struct crop* crops) {
     struct crop *crop_iter=crops;
     while (crop_iter!=NULL) {
         if (crop_iter->price<10) {
-            crop_iter->price+=rand()%10;
+            crop_iter->price+=random()%10;
         } else if (crop_iter->price>100) {
-            crop_iter->price-=rand()%10;
+            crop_iter->price-=random()%10;
         } else {
-            crop_iter->price+=(rand()%21)-10;
+            crop_iter->price+=(random()%21)-10;
         }
         crop_iter=crop_iter->next_crop;
     }
@@ -190,7 +191,7 @@ void purchase_items(struct farm** farms,int* money) {
                     continue;
                 }
                 /* A little risky, relying on values in freed memory, but I live life on the edge */
-                free(*farms);
+                free_c(*farms);
                 *farms=(*farms)->next_farm;
                 *money+=50;
                 valid_num=1;

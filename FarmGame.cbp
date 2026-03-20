@@ -34,6 +34,9 @@
 			<Add option="-Wall" />
 			<Add option="-std=c89 -pedantic-errors" />
 		</Compiler>
+		<Linker>
+			<Add library="obj/Debug/utils.obj" />
+		</Linker>
 		<Unit filename="adjustfarmsetup.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
@@ -47,10 +50,10 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="utils.c">
+		<Unit filename="utils.asm">
 			<Option compilerVar="CC" />
-			<Option compile="0" />
 			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utils.obj' />
 		</Unit>
 		<Extensions>
 			<lib_finder disable_auto="1" />
