@@ -22,7 +22,10 @@ Ideally all gameplay should be do-able and user friendly within the terminal, ho
 - Use .C files and not .h files for new code. .h files are often used like an interface to re-state what's in the .C file and be accessed by other files. This
 makes things more complicated and duplicative than just putting all of my code in .C files and not having function interfaces at all.
 
-- Codeblocks is superior to VSCode
+- Use Codeblocks as the IDE
+
+- Don't use libraries, including the C standard library. Instead of using someone else's code, we could be cool and rewrite it ourselves.
+We can interface with Windows System Binaries ourselves.
 
 # Playing
 

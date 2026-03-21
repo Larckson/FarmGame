@@ -22,7 +22,6 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
-					<Add option="-std=gnu++98" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -39,28 +38,28 @@
 			<Add library="gdi32" />
 			<Add library="user32" />
 		</Linker>
-		<Unit filename="adjustfarmsetup.c">
+		<Unit filename="src/adjustfarmsetup.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="charbitmap.c">
+		<Unit filename="src/charbitmap.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="gfxutils.c">
-			<Option compilerVar="CC" />
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="initfarmsetup.c">
+		<Unit filename="src/gfxutils.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="main.c">
+		<Unit filename="src/initfarmsetup.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="src/main.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="utils.asm">
+		<Unit filename="src/utils.asm">
 			<Option compilerVar="CC" />
 			<Option link="0" />
 			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utils.obj' />
