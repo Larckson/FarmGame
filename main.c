@@ -1,7 +1,40 @@
+#include "adjustfarmsetup.c"
 #include "gfxutils.c"
 
-int main(void)
-{
+extern unsigned long get_time();
+extern void set_rand(unsigned long seed);
+
+int main() {
+    int year;
+    int money=50;
+    struct crop* crops=create_initial_crops();
+    struct farm* farms=add_farm(NULL);
+
+    /* temp graphics test code */
+    char buf[10];
+    print_text("Enter y to do a graphics test");
+    read_text(buf, sizeof(buf));
+    if (buf[0]=='y') { graphics_test(); }
+    /* temp graphics test code end */
+
+    set_rand(get_time());
+
+    for (year=1800;year<1900;year++) {
+        print_text("Year: ");print_int(year);print_text("\n");
+        money+=farm_growth_effects(farms,crops);
+        money-=expenses_effects(farms);
+        purchase_items(&farms,&money);
+        update_crop_prices(crops);
+        print_farm_minerals(farms);
+        prompt_new_crops(farms,crops);
+        print_text("-------------");
+        print_text("\033[2J\033[H");
+    }
+
+    return 0;
+}
+
+int graphics_test() {
     if (!gfx_init("My Graphics")) return 1;
 
     gfx_clear(BLACK);
@@ -21,8 +54,7 @@ int main(void)
     gfx_draw_string(10, 20, "ABCDEFGHIJKLMNOPQSRTUVWXYZ", YELLOW);
     gfx_draw_char(400, 300, 'A', RED);
 
-    while (gfx_present()) {
-    }
+    while (gfx_present()) {}
 
     gfx_shutdown();
     return 0;
