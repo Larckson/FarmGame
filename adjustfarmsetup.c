@@ -144,13 +144,9 @@ void print_farm_minerals(struct farm* farms) {
     }
     print_text("\n");
     while (farm_iter!=NULL) {
-        print_text("Farm");
-        print_char(&farm_iter->name);
-        print_text(":     ");
+        print_text("Farm");print_char(&farm_iter->name);print_text(":     ");
         for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
-            print_text("  ");
-            print_int(farm_iter->minerals[mineral_n]);
-            print_text("0%  ");
+            print_text("  ");print_int(farm_iter->minerals[mineral_n]);print_text("0%  ");
         }
         farm_iter=farm_iter->next_farm;
         print_text("\n");
@@ -161,9 +157,7 @@ int expenses_effects(struct farm* farms) {
     struct farm *farm_iter=farms;
     int cost_acc=0;
     while (farm_iter!=NULL) {
-        print_text("Farm ");
-        print_char(&farm_iter->name);
-        print_text(" expenses: $10\n");
+        print_text("Farm ");print_char(&farm_iter->name);print_text(" expenses: $10\n");
         cost_acc+=10;
         farm_iter=farm_iter->next_farm;
     }
@@ -174,9 +168,7 @@ void purchase_items(struct farm** farms,int* money) {
     char buf[10];
     int num;
     int valid_num=0;
-    print_text("Money: $");
-    print_int(*money);
-    print_text("\n");
+    print_text("Money: $");print_int(*money);print_text("\n");
 
     while (!valid_num) {
         print_text("0:Do Nothing, 1:Purchase Farm(-$50), 2:Sell Farm(+$50)\n");
@@ -207,9 +199,7 @@ void purchase_items(struct farm** farms,int* money) {
                 *money-=50;
                 valid_num=1;
                 print_text("Farm Purchased -$50\n");
-                print_text("Money after purchase: ");
-                print_int(*money);
-                print_text("\n");
+                print_text("Money after purchase: ");print_int(*money);print_text("\n");
                 break;
             case 2:
                 if((*farms)->next_farm==NULL) {

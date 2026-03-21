@@ -11,9 +11,7 @@ int main() {
     set_rand(get_time());
 
     for (year=1800;year<1900;year++) {
-        print_text("Year: ");
-        print_int(year);
-        print_text("\n");
+        print_text("Year: ");print_int(year);print_text("\n");
         money+=farm_growth_effects(farms,crops);
         money-=expenses_effects(farms);
         purchase_items(&farms,&money);
