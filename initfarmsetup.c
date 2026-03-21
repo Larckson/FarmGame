@@ -1,7 +1,7 @@
 #ifndef INITFARMSETUP
 #define INITFARMSETUP
 
-#define MINERAL_COUNT 5
+#define mineral_count 5
 
 typedef unsigned long size_type;
 #define NULL ((void *)0)
@@ -11,10 +11,10 @@ extern void copy_string(char* s,char* d);
 extern void* mem_alloc(size_type size);
 extern void  mem_free(void* ptr);
 
-const char mineral_names[MINERAL_COUNT][3] = {"N","K","Mo","P","C"};
+const char mineral_names[mineral_count][3] = {"N","K","Mo","P","C"};
 
 struct farm {
-    int minerals[MINERAL_COUNT];
+    int minerals[mineral_count];
     int current_crop;
     char name;
     struct farm* next_farm;
@@ -40,7 +40,7 @@ struct farm* add_farm(struct farm* farms) {
     new_farm->current_crop = 0;
     new_farm->name = (farms==NULL) ? 'A' : farms->name+1;
 
-    for (i=0;i<MINERAL_COUNT;i++) {
+    for (i=0;i<mineral_count;i++) {
         new_farm->minerals[i] = 2;
     }
 
@@ -49,7 +49,7 @@ struct farm* add_farm(struct farm* farms) {
 }
 
 struct crop* create_initial_crops() {
-    int crop_length=4;
+    int crop_length = 4;
     struct crop *crops=(struct crop*)mem_alloc(crop_length*sizeof(struct crop));
     struct crop *crop_iter=crops;
 

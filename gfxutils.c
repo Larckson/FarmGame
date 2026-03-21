@@ -144,10 +144,9 @@ int gfx_init(const char *title) {
     AdjustWindowRect(&window_rect,0x00CF0000,0); /* WS_OVERLAPPEDWINDOW */
 
     g_hwnd=CreateWindowExA(
-        0, "GfxWnd", title,
-        0x00CF0000 | 0x10000000, /* WS_OVERLAPPEDWINDOW, WS_VISIBLE */
-        ((int)0x80000000), ((int)0x80000000), /* CW_USEDEFAULT */
-        SCREEN_W,SCREEN_H,
+        0,"GfxWnd",title,
+        0x10CF0000,((int)0x80000000),((int)0x80000000), /* WS_OVERLAPPEDWINDOW&WS_VISIBLE, CW_USEDEFAULT */
+        window_rect.right-window_rect.left,window_rect.bottom-window_rect.top,
         0, 0, GetModuleHandleA(0), 0
     );
     if (!g_hwnd) { return 0; }
