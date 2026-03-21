@@ -1,6 +1,6 @@
 /* Syntax highlighting makes X show as a different color than 0 to make
 letters viewed here in a code editor clearer */
-#define X 1
+enum { X = 1 };
 
 #define bit_to_byte(a,b,c,d,e,f,g,h) ((unsigned char) \
     (((a)<<7)|((b)<<6)|((c)<<5)|((d)<<4)|((e)<<3)|((f)<<2)|((g)<<1)|(h)))
@@ -967,5 +967,3 @@ static const unsigned char gfx_font[96][8] = {
         bit_to_byte(X,X,X,X,X,X,X,X)
     }
 };
-
-#undef X
