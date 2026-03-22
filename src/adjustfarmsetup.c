@@ -3,8 +3,8 @@
 
 extern unsigned long get_rand(void);
 extern void read_text(char* buf, int size);
-extern void print_int(int num);
-extern void print_char(char* c);
+extern int print_int(int num);
+extern int print_char(char* c);
 extern int text_to_int(char* buf, int* out);
 extern int has_newline(char *buf, int size);
 
@@ -13,7 +13,7 @@ extern int has_newline(char *buf, int size);
 
 void update_crop_prices(struct crop* crops) {
     struct crop *crop_iter=crops;
-    int str_len;
+    int str_len,i;
     while (crop_iter!=NULL) {
         if (crop_iter->price<10) {
             crop_iter->price+=get_rand()%10;
@@ -27,10 +27,20 @@ void update_crop_prices(struct crop* crops) {
 
     /* --- PRINT NEW PRICE TABLE --- */
     /* print crop names */
-    print_text("Crop Names:");
+    print_text("Crop ID:   ");
+    crop_iter=crops;
+    i=1;
+    while (crop_iter!=NULL) {
+        str_len=print_int(i);
+        while (str_len++ < 8) print_text(" ");
+        crop_iter=crop_iter->next_crop;
+        i++;
+    }
+
+    print_text("\nCrop Names:");
     crop_iter=crops;
     while (crop_iter!=NULL) {
-        int str_len=print_text(crop_iter->name);
+        str_len=print_text(crop_iter->name);
         while (str_len++ < 9) print_text(" ");
         crop_iter=crop_iter->next_crop;
     }
@@ -125,7 +135,7 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
     void *prompt_thread;
     struct farm *farm_iter=farms;
     unsigned int i,ans=0;
-    char base_prompt[] = "What crop to grow on farm _: ";
+    char base_prompt[] = "What crop to grow on farm _ (Crop ID): ";
 
     struct crop* crop_iter=crops;
 
@@ -141,15 +151,16 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
             gui_input_detect_loop(&ans);
 
             crop_iter=crops;
-            for (i=0;i<ans;i++) {
+            for (i=1;i<ans;i++) {
                 crop_iter=crop_iter->next_crop;
                 if (crop_iter==NULL) {
                     print_text("Num greater than crop count, not valid.\n");
                     ans=0;
                     print_text(base_prompt);
-                    continue;
+                    break;
                 }
             }
+            if (ans == 0) { continue; } /* skip mineral check if crop was invalid */
             if (farm_iter->minerals[crop_iter->mineral_del]==0) {
                 print_text("Not enough minerals to grow crop.\n");
                 ans=0;
@@ -157,7 +168,7 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
                 continue;
             }
         }
-        farm_iter->current_crop=ans;
+        farm_iter->current_crop=ans-1;
         farm_iter=farm_iter->next_farm;
 
         TerminateThread(prompt_thread, 0);
@@ -198,7 +209,7 @@ int expenses_effects(struct farm* farms) {
 void purchase_items(struct farm** farms,int* money) {
     void *prompt_thread;
     unsigned int ans=0;
-    char* base_prompt = "1:Do Nothing, 2:Purchase Farm(-$50), 3:Sell Farm(+$50)\n";
+    char* base_prompt = "1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
     print_text("Money: $");print_int(*money);print_text("\n");
 
     gui_purchase_items_setup();

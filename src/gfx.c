@@ -1,6 +1,8 @@
 #ifndef GFX
 #define GFX
 
+extern void int_to_str(int num, char* buf);
+
 #include "gfxutils.c"
 #include "initfarmsetup.c"
 
@@ -19,6 +21,7 @@ void gui_input_detect_loop(unsigned int* ans) {
 
     for (button_iter=0;button_iter<but_count;button_iter++) {
         if (click_in_rect(but_pos[button_iter][0],but_pos[button_iter][1],but_pos[button_iter][2],but_pos[button_iter][3])) {
+            print_int(button_iter+1);print_text("\n");
             *ans = button_iter+1;
             mouse_x_click=mouse_y_click=0;
             return;
@@ -52,6 +55,7 @@ void gui_purchase_items_setup() {
 }
 
 void gui_prompt_new_crops_setup(struct crop* crops) {
+    char num_buf[12];
     int text_pos;
     struct crop* crop_iter=crops;
     if (!gfx_present()) { return; }
@@ -65,7 +69,8 @@ void gui_prompt_new_crops_setup(struct crop* crops) {
         gfx_rect_fill(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],BLUE);
         gfx_rect(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],WHITE);
 
-        text_pos=gfx_draw_char(but_pos[but_count][0]+10,but_pos[but_count][1]+10, '1'+but_count, WHITE);
+        int_to_str(but_count+1, num_buf);
+        text_pos=gfx_draw_string(but_pos[but_count][0]+10,but_pos[but_count][1]+10, num_buf, WHITE);
         text_pos=gfx_draw_char(text_pos,but_pos[but_count][1]+10, ':', WHITE);
         text_pos=gfx_draw_string(text_pos,but_pos[but_count][1]+10, crop_iter->name, WHITE);
 

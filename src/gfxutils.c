@@ -303,7 +303,7 @@ void gfx_circle_fill(int center_x,int center_y,int radius,unsigned int color) {
 int gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
     int x_iter,y_iter,char_index=(unsigned char)char_in-32;
     unsigned char char_bitmap;
-    if (char_index<0||char_index>95) { return; }
+    if (char_index<0||char_index>95) { return 0; }
     for (x_iter=0;x_iter<8;x_iter++) {
         char_bitmap=gfx_font[char_index][x_iter];
         for (y_iter=0;y_iter<8;y_iter++) {
