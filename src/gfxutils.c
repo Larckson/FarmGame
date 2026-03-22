@@ -1,3 +1,6 @@
+#ifndef GFXUTILS
+#define GFXUTILS
+
 #include "charbitmap.c"
 
 /* screen */
@@ -89,14 +92,17 @@ extern int abs_val(int x);
 extern void mem_set(void *dst,int val,unsigned int n);
 
 /* ── internal state ──────────────────────────────────────────────────────── */
-unsigned int *frame_buffer = 0;
+unsigned int *frame_buffer=0;
 
-static void *g_hwnd = 0;
-static void *g_hdc = 0;
-static void *g_hbm = 0;
-static void *g_memdc = 0;
+static void *g_hwnd=0;
+static void *g_hdc=0;
+static void *g_hbm=0;
+static void *g_memdc=0;
 static struct bitmap_info g_bmi;
-static int g_running = 1;
+static int g_running=1;
+
+static int mouse_x_click=0;
+static int mouse_y_click=0;
 
 /* window procedure */
 typedef void * (__stdcall *WNDPROC)(void*, unsigned int, void*, void*);
@@ -113,6 +119,13 @@ static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *l
                 g_running = 0;
                 DestroyWindow(hwnd);
             }
+            return 0;
+        }
+        case 0x0201: { /* WM_LBUTTONDOWN */
+            unsigned char *lp_char = (unsigned char *)&lp;
+            mouse_x_click = (short)(lp_char[0] | (lp_char[1] << 8));
+            mouse_y_click = (short)(lp_char[2] | (lp_char[3] << 8));
+
             return 0;
         }
     }
@@ -306,3 +319,5 @@ void gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color
         string++;
     }
 }
+
+#endif

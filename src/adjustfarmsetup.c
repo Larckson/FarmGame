@@ -7,6 +7,7 @@ extern void print_int(int num);
 extern void print_char(char* c);
 extern int text_to_int(char* buf, int* out);
 
+#include "gfx.c"
 #include "initfarmsetup.c"
 
 void update_crop_prices(struct crop* crops) {
@@ -164,59 +165,99 @@ int expenses_effects(struct farm* farms) {
     return cost_acc;
 }
 
-void purchase_items(struct farm** farms,int* money) {
-    char buf[10];
-    int num;
-    int valid_num=0;
-    print_text("Money: $");print_int(*money);print_text("\n");
+static int has_newline(char *buf, int size) {
+    int i;
+    for (i=0;i<size;i++) {
+        if (buf[i]=='\n') { return 1; }
+    }
+    return 0;
+}
 
-    while (!valid_num) {
-        print_text("0:Do Nothing, 1:Purchase Farm(-$50), 2:Sell Farm(+$50)\n");
+static unsigned long __stdcall prompt_num_async(void* arg) {
+    int *ans = (int *)arg;
+    int num,text_filled_buffer;
+    char buf[10];
+    while (1) {
+        while (*ans!=0) {}
         read_text(buf, sizeof(buf));
+        text_filled_buffer=has_newline(buf,sizeof(buf));
+
+        if(!text_filled_buffer) {
+            /* If it filled the buffer, the next ReadConsoleA will contain the rest of the text, so we have to drain it */
+            do { read_text(buf,sizeof(buf)); } while(!has_newline(buf,sizeof(buf)));
+            print_text("Input too many chars. Try again\n");
+            continue;
+        }
 
         if (text_to_int(buf, &num)!=1) {
             print_text("Not a number. Try again.\n");
+            continue;
+        }
+        if (num==0) {
+            print_text("Num is 0, not valid.\n");
             continue;
         }
         if (num<0) {
             print_text("Num less than 0, not valid.\n");
             continue;
         }
-        if (num>2) {
-            print_text("Num too large, not valid.\n");
-            continue;
-        }
-        switch (num) {
-            case 0:
-                valid_num=1;
-                break;
-            case 1:
+        *ans=num;
+    }
+    return 0;
+}
+
+void purchase_items(struct farm** farms,int* money) {
+    void *prompt_thread;
+    int ans=0;
+    char* base_prompt = "0:Do Nothing, 1:Purchase Farm(-$50), 2:Sell Farm(+$50)\n";
+    print_text("Money: $");print_int(*money);print_text("\n");
+
+    purchase_items_gui_setup();
+
+    print_text(base_prompt);
+    prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+
+    while (ans==0 && gfx_present()) {
+        purchase_items_gui_loop();
+
+        switch (ans) {
+            case 0: { break; }
+            case 1: {
                 if(*money<50) {
                     print_text("Do not have enough money ($50).\n");
+                    ans=0;
+                    print_text(base_prompt);
                     continue;
                 }
                 *farms=add_farm(*farms);
                 *money-=50;
-                valid_num=1;
                 print_text("Farm Purchased -$50\n");
                 print_text("Money after purchase: ");print_int(*money);print_text("\n");
                 break;
-            case 2:
+            }
+            case 2: {
                 if((*farms)->next_farm==NULL) {
                     print_text("You only have one farm, there are no excess to sell.\n");
+                    ans=0;
+                    print_text(base_prompt);
                     continue;
                 }
                 mem_free(*farms);
                 *farms=(*farms)->next_farm;
                 *money+=50;
-                valid_num=1;
                 print_text("Farm Sold +$50\n");
                 break;
-            default:
-                print_text("How did we get here");
-                break;
+            }
+            default: {
+                print_text("Num too large.\n");
+                ans=0;
+                print_text(base_prompt);
+                continue;
+            }
         }
     }
+
+    TerminateThread(prompt_thread, 0);
 }
 
 #endif
