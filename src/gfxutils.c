@@ -249,6 +249,14 @@ void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
     gfx_vline(left_x+width-1,top_y,top_y+height-1,color); /* right */
 }
 
+int click_in_rect(int left_x,int top_y,int width,int height) {
+    if(mouse_x_click>left_x && mouse_x_click<left_x+width &&
+       mouse_y_click>top_y && mouse_y_click <top_y+height) {
+        return 1;
+    }
+    return 0;
+}
+
 void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color) {
     int row;
     for (row=top_y;row<top_y+height;row++) {

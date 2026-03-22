@@ -174,55 +174,58 @@ static int has_newline(char *buf, int size) {
 }
 
 static unsigned long __stdcall prompt_num_async(void* arg) {
-    int *ans = (int *)arg;
-    int num,text_filled_buffer;
+    int *verified_ans = (int *)arg;
+    int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
-        while (*ans!=0) {}
+        while (*verified_ans!=0) {}
         read_text(buf, sizeof(buf));
+        /* More validation should be done in the receiving function, based on variable specific inputs.
+        Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
         text_filled_buffer=has_newline(buf,sizeof(buf));
 
         if(!text_filled_buffer) {
-            /* If it filled the buffer, the next ReadConsoleA will contain the rest of the text, so we have to drain it */
+            /* If user input overflowed the buffer, subsequent ReadConsoleAs will contain the rest of the text, so we have to drain it */
             do { read_text(buf,sizeof(buf)); } while(!has_newline(buf,sizeof(buf)));
             print_text("Input too many chars. Try again\n");
             continue;
         }
 
-        if (text_to_int(buf, &num)!=1) {
+        if (text_to_int(buf, &num_ans)!=1) {
             print_text("Not a number. Try again.\n");
             continue;
         }
-        if (num==0) {
+        if (num_ans==0) {
             print_text("Num is 0, not valid.\n");
             continue;
         }
-        if (num<0) {
+        if (num_ans<0) {
             print_text("Num less than 0, not valid.\n");
             continue;
         }
-        *ans=num;
+        *verified_ans=num_ans;
     }
     return 0;
 }
 
 void purchase_items(struct farm** farms,int* money) {
     void *prompt_thread;
-    int ans=0;
-    char* base_prompt = "0:Do Nothing, 1:Purchase Farm(-$50), 2:Sell Farm(+$50)\n";
+    unsigned int ans=0;
+    char* base_prompt = "1:Do Nothing, 2:Purchase Farm(-$50), 3:Sell Farm(+$50)\n";
     print_text("Money: $");print_int(*money);print_text("\n");
 
-    purchase_items_gui_setup();
+    gui_purchase_items_setup();
 
     print_text(base_prompt);
     prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
 
-    while (ans==0 && gfx_present()) {
-        purchase_items_gui_loop();
+    while (ans==0) {
+        gui_input_detect_loop(&ans);
 
         switch (ans) {
-            case 0: { break; }
-            case 1: {
+            case 0: { break; } /* no answer given yet. Keep looping */
+            case 1: { break; }
+            case 2: {
                 if(*money<50) {
                     print_text("Do not have enough money ($50).\n");
                     ans=0;
@@ -235,7 +238,7 @@ void purchase_items(struct farm** farms,int* money) {
                 print_text("Money after purchase: ");print_int(*money);print_text("\n");
                 break;
             }
-            case 2: {
+            case 3: {
                 if((*farms)->next_farm==NULL) {
                     print_text("You only have one farm, there are no excess to sell.\n");
                     ans=0;
