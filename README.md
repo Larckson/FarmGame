@@ -7,6 +7,10 @@ Possible additions may be purchasing/selling of farms or random encounters
 
 Ideally all gameplay should be do-able and user friendly within the terminal, however graphics.h Borland Graphics interface could also be used
 
+![Sample Image of Menu to Buy/Sell Farms](sampleimages/BuyFarm.PNG)
+
+![Sampe Image of Menu to Choose Crop to Plant on a Farm](sampleimages/ChooseCrop.PNG)
+
 # Design Notes
 
 ### Most of this is bad for big projects, but is fun to do here
@@ -35,11 +39,9 @@ without requiring any other dependent files that do not come with Windows.
 If you don't know how to download the file from the releases page, you can also run this in PowerShell on your computer to get+run the latest version
 
 ```powershell
-$repo = "Larckson/FarmGame"
-
-$release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
+$release = Invoke-RestMethod "https://api.github.com/repos/LarzP123/FarmGame/releases/latest"
 $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
-$outPath = Join-Path [Environment]::GetFolderPath("Desktop") $asset.name
+$outPath = Join-Path -Path ([Environment]::GetFolderPath("Desktop")) -ChildPath $asset.name
 
 Invoke-WebRequest $asset.browser_download_url -OutFile $outPath
 
