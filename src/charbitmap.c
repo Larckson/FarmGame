@@ -968,4 +968,4 @@ static const unsigned char gfx_font[96][8] = {
     }
 };
 
-#undef X()
+#undef X

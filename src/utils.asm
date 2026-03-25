@@ -11,6 +11,8 @@ global read_text
 global print_char
 global print_int
 global text_to_int
+global has_newline
+global int_to_str
 
 ; These live in Kernel32.dll, goes back to early versions of Windows like Windows 95
 extern GetSystemTimeAsFileTime ; gets system time as 64bit val
@@ -269,6 +271,7 @@ print_char:
     lea     r9,  [rsp+32]               ; lpNumberOfCharsWritten (ignored)
     mov     qword [rsp+40], 0           ; lpReserved = NULL
     call    WriteConsoleA
+    mov     eax, 1                      ; always return 1
 
     add     rsp, 56
     pop     rbx
@@ -531,6 +534,83 @@ text_to_int:
 
 .text_to_int_ret:
     add     rsp, 40
+    pop     rdi
+    pop     rbx
+    ret
+
+
+
+has_newline:
+    xor eax, eax            ; i = 0
+
+.loop:
+    cmp eax, edx
+    jge .not_found
+
+    mov r8b, [rcx + rax]    ; use different register
+    cmp r8b, 10
+    je .found
+
+    inc eax
+    jmp .loop
+
+.found:
+    mov eax, 1
+    ret
+
+.not_found:
+    xor eax, eax
+    ret
+
+
+; int_to_str(long long num, char* buf)
+;   rcx = number (signed 64-bit)
+;   rdx = destination buffer (caller ensures it's large enough, ~21 bytes)
+int_to_str:
+    push    rbx
+    push    rdi
+    push    rsi
+    sub     rsp, 40
+
+    movsx   rbx, ecx            ; preserve number
+    mov     rdi, rdx            ; preserve dest buffer
+
+    lea     rsi, [rel int_buf]
+    mov     byte [rsi+31], 0
+    mov     rcx, 30
+
+    xor     r8, r8
+    test    rbx, rbx
+    jns     .convert
+    mov     r8, 1
+    neg     rbx
+
+.convert:
+    mov     rax, rbx
+    mov     rbx, 10
+.digit_loop:
+    xor     rdx, rdx
+    div     rbx
+    add     dl, '0'
+    mov     [rsi+rcx], dl
+    dec     rcx
+    test    rax, rax
+    jnz     .digit_loop
+
+    test    r8, r8
+    jz      .copy
+    mov     byte [rsi+rcx], '-'
+    dec     rcx
+
+.copy:
+    inc     rcx                 ; rcx = index of first char
+    lea     rsi, [rsi+rcx]      ; rsi points to start of number string
+    mov     rcx, rdi            ; destination
+    mov     rdx, rsi            ; source
+    call    copy_string         ; null terminator is already at [int_buf+31]
+
+    add     rsp, 40
+    pop     rsi
     pop     rdi
     pop     rbx
     ret

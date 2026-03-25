@@ -45,6 +45,13 @@
 		</Unit>
 		<Unit filename="src/charbitmap.c">
 			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="src/gfx.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
 		</Unit>
 		<Unit filename="src/gfxutils.c">
 			<Option compilerVar="CC" />

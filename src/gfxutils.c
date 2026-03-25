@@ -1,3 +1,6 @@
+#ifndef GFXUTILS
+#define GFXUTILS
+
 #include "charbitmap.c"
 
 /* screen */
@@ -89,14 +92,17 @@ extern int abs_val(int x);
 extern void mem_set(void *dst,int val,unsigned int n);
 
 /* ── internal state ──────────────────────────────────────────────────────── */
-unsigned int *frame_buffer = 0;
+unsigned int *frame_buffer=0;
 
-static void *g_hwnd = 0;
-static void *g_hdc = 0;
-static void *g_hbm = 0;
-static void *g_memdc = 0;
+static void *g_hwnd=0;
+static void *g_hdc=0;
+static void *g_hbm=0;
+static void *g_memdc=0;
 static struct bitmap_info g_bmi;
-static int g_running = 1;
+static int g_running=1;
+
+static int click_x=0;
+static int click_y=0;
 
 /* window procedure */
 typedef void * (__stdcall *WNDPROC)(void*, unsigned int, void*, void*);
@@ -115,12 +121,19 @@ static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *l
             }
             return 0;
         }
+        case 0x0201: { /* WM_LBUTTONDOWN */
+            unsigned char *lp_char = (unsigned char *)&lp;
+            click_x = (short)(lp_char[0] | (lp_char[1] << 8));
+            click_y = (short)(lp_char[2] | (lp_char[3] << 8));
+
+            return 0;
+        }
     }
     return DefWindowProcA(hwnd, msg, wp, lp);
 }
 
-void gfx_clear() {
-    mem_set(frame_buffer,0,4*SCREEN_W*SCREEN_H);
+void gfx_clear(int height_start) {
+    mem_set(frame_buffer+SCREEN_W*height_start,0,4*SCREEN_W*(SCREEN_H-height_start));
 }
 
 /* init/shutdown */
@@ -169,7 +182,7 @@ int gfx_init(const char *title) {
     SelectObject(g_memdc,g_hbm);
     frame_buffer=(unsigned int *)bits;
 
-    gfx_clear();
+    gfx_clear(0);
     return 1;
 }
 
@@ -215,20 +228,6 @@ void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
     while (pixel_iter--) { *pixel=color;pixel+=SCREEN_W; }
 }
 
-/* Bresenham's line algorithm */
-void gfx_line(int x_0,int y_0,int x_1,int y_1,unsigned int color) {
-    int dist_x=+abs_val(x_1-x_0),dir_x=x_0<x_1?1:-1;
-    int dist_y=-abs_val(y_1-y_0),dir_y=y_0<y_1?1:-1;
-    int double_acc_err,acc_err=dist_x+dist_y;
-    while (1) {
-        gfx_put_pixel(x_0,y_0,color);
-        if (x_0==x_1&&y_0==y_1) { break; }
-        double_acc_err=2*acc_err;
-        if (double_acc_err>= dist_y) { acc_err+=dist_y;x_0+=dir_x; }
-        if (double_acc_err<= dist_x) { acc_err+=dist_x;y_0+=dir_y; }
-    }
-}
-
 void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
     gfx_hline(left_x,left_x+width-1,top_y,color); /* top */
     gfx_hline(left_x,left_x+width-1,top_y+height-1,color); /* bottom */
@@ -243,46 +242,24 @@ void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color)
     }
 }
 
-void gfx_circle(int center_x,int center_y,int radius,unsigned int color) {
-    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
-    while (x_iter<=y_iter) {
-        gfx_put_pixel(center_x+x_iter,center_y+y_iter,color); /* bottom bottom right 8th */
-        gfx_put_pixel(center_x-x_iter,center_y+y_iter,color); /* bottom bottom left 8th */
-        gfx_put_pixel(center_x+x_iter,center_y-y_iter,color); /* top top right 8th */
-        gfx_put_pixel(center_x-x_iter,center_y-y_iter,color); /* top top left 8th */
-        gfx_put_pixel(center_x+y_iter,center_y+x_iter,color); /* bottom right right 8th */
-        gfx_put_pixel(center_x-y_iter,center_y+x_iter,color); /* bottom left left 8th */
-        gfx_put_pixel(center_x+y_iter,center_y-x_iter,color); /* top right right 8th */
-        gfx_put_pixel(center_x-y_iter,center_y-x_iter,color); /* top left left 8th */
-        if (midpoint_outside_circle<0) {
-            midpoint_outside_circle+=2*x_iter+3;
-        } else {
-            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
+void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
+    int x_iter, y_iter;
+
+    for (y_iter = 0; y_iter < height; y_iter++) {
+        for (x_iter = 0; x_iter < width; x_iter++) {
+
+            /* diagonal pattern */
+            if (((x_iter + y_iter) % spacing) == 0) {
+                gfx_put_pixel(left_x + x_iter, top_y + y_iter, color);
+            }
         }
-        x_iter++;
     }
 }
 
-void gfx_circle_fill(int center_x,int center_y,int radius,unsigned int color) {
-    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
-    while (x_iter<=y_iter) {
-        gfx_hline(center_x-x_iter,center_x+x_iter,center_y+y_iter,color); /* bottom 4th */
-        gfx_hline(center_x-x_iter,center_x+x_iter,center_y-y_iter,color); /* top 4th */
-        gfx_hline(center_x-y_iter,center_x+y_iter,center_y+x_iter,color); /* center bottom 4th */
-        gfx_hline(center_x-y_iter,center_x+y_iter,center_y-x_iter,color); /* center top 4th */
-        if (midpoint_outside_circle<0) {
-            midpoint_outside_circle+=2*x_iter+3;
-        } else {
-            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
-        }
-        x_iter++;
-    }
-}
-
-void gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
+int gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
     int x_iter,y_iter,char_index=(unsigned char)char_in-32;
     unsigned char char_bitmap;
-    if (char_index<0||char_index>95) { return; }
+    if (char_index<0||char_index>95) { return 0; }
     for (x_iter=0;x_iter<8;x_iter++) {
         char_bitmap=gfx_font[char_index][x_iter];
         for (y_iter=0;y_iter<8;y_iter++) {
@@ -291,9 +268,10 @@ void gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
             }
         }
     }
+    return char_x+8;
 }
 
-void gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color) {
+int gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color) {
     while (*string) {
         if (*string=='\n') {
             char_x=0;char_y+=8;
@@ -305,4 +283,7 @@ void gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color
         }
         string++;
     }
+    return char_x;
 }
+
+#endif
