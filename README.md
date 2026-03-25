@@ -35,9 +35,7 @@ without requiring any other dependent files that do not come with Windows.
 If you don't know how to download the file from the releases page, you can also run this in PowerShell on your computer to get+run the latest version
 
 ```powershell
-$repo = "Larckson/FarmGame"
-
-$release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
+$release = Invoke-RestMethod "https://api.github.com/repos/LarzP123/FarmGame/releases/latest"
 $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
 $outPath = Join-Path [Environment]::GetFolderPath("Desktop") $asset.name
 
