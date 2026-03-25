@@ -16,7 +16,9 @@ int main() {
         print_text("Year: ");print_int(year);print_text("\n");
         money+=farm_growth_effects(farms,crops);
         money-=expenses_effects(farms);
+        gui_basic_utils(money, year);
         purchase_items(&farms,&money);
+        gui_basic_utils(money, year);
         update_crop_prices(crops);
         print_farm_minerals(farms);
         prompt_new_crops(farms,crops);

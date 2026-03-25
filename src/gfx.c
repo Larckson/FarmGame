@@ -76,24 +76,29 @@ void free_buttons() {
     but_iter = NULL;
 }
 
-void gui_prompt_new_crops_setup(struct crop* crop_iter) {
-    int button_y=100,crop_num=1;
+void gui_basic_utils(int money, int year) {
+    char num_buf[10];int text_pos=5;
 
-    while (crop_iter!=NULL) {
-        add_button(300,button_y,200,40,crop_iter->name,crop_num,0);
+    if (!gfx_present()) { return; }
+    gfx_clear(0);
 
-        crop_iter=crop_iter->next_crop;
-        button_y+=50;crop_num++;
-    }
+    int_to_str(year, num_buf);
+    text_pos=gfx_draw_string(text_pos,5,"Year:",WHITE);
+    text_pos=gfx_draw_string(text_pos,5,num_buf,WHITE);
+    text_pos=gfx_draw_string(text_pos,5,"  ",WHITE);
+
+    int_to_str(money, num_buf);
+    text_pos=gfx_draw_string(text_pos,5,"Money:$",WHITE);
+    text_pos=gfx_draw_string(text_pos,5,num_buf,WHITE);
 }
 
-void gui_farm_minerals(struct farm* farm_iter, struct crop* crops,char farm_select,char farm_view) {
+void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_select,char farm_view) {
     char full_farm_name[] = "Farm _";
     int button_x=20,n,bar_height;
     char num_buf[10];
 
     if (!gfx_present()) { return; }
-    gfx_clear(BLACK);
+    gfx_clear(15);
 
     /* border around farm view window and buttons on top */
     gfx_rect(button_x,70,700,500,WHITE);
@@ -113,10 +118,32 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crops,char farm_sele
             for (n=1;n<=5;n++) {
                 gfx_hline(50,60,250-30*n,WHITE);
                 int_to_str(n*20, num_buf);
-                gfx_draw_char(gfx_draw_string(50,240-30*n, num_buf, WHITE),240-30*n, '%', WHITE);
+                gfx_draw_char(gfx_draw_string(50,240-30*n,num_buf,WHITE),240-30*n,'%',WHITE);
+            }
+
+            /* Crop Info Table */
+            n=0;
+            while (crop_iter!=NULL) {
+                gfx_draw_string(300,90,"Choose to Plant:",WHITE);
+                add_button(300,100+40*n,100,20,crop_iter->name,n,0);
+
+                gfx_draw_string(450,90,"Add:",WHITE);
+                gfx_draw_string(gfx_draw_char(450,100+40*n,'^', WHITE)
+                    ,100+40*n,mineral_names[crop_iter->mineral_add],WHITE);
+
+                gfx_draw_string(500,90,"Del:",WHITE);
+                gfx_draw_string(gfx_draw_char(500,100+40*n,'v', WHITE)
+                    ,100+40*n,mineral_names[crop_iter->mineral_del],WHITE);
+
+                gfx_draw_string(550,90,"Price:",WHITE);
+                int_to_str(crop_iter->price, num_buf);
+                gfx_draw_string(gfx_draw_char(550,100+40*n,'$', WHITE)
+                    ,100+40*n,num_buf,WHITE);
+
+                crop_iter=crop_iter->next_crop;
+                n++;
             }
         }
-
 
         full_farm_name[5]=farm_iter->name;
         add_button(button_x,40,100,30,full_farm_name,farm_iter->name,1);
@@ -124,16 +151,11 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crops,char farm_sele
         farm_iter=farm_iter->next_farm;
         button_x+=100;
     }
-
-    /* buttons to choose crop to plant */
-    if (farm_select == farm_view) {
-        gui_prompt_new_crops_setup(crops);
-    }
 }
 
 void gui_purchase_items_setup() {
     if (!gfx_present()) { return; }
-    gfx_clear(BLACK);
+    gfx_clear(15);
 
     add_button(50, 50,200,40,"Do Nothing",1,0);
     add_button(50,100,200,40,"Buy Farm (-$50)",2,0);

@@ -132,8 +132,8 @@ static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *l
     return DefWindowProcA(hwnd, msg, wp, lp);
 }
 
-void gfx_clear() {
-    mem_set(frame_buffer,0,4*SCREEN_W*SCREEN_H);
+void gfx_clear(int height_start) {
+    mem_set(frame_buffer+SCREEN_W*height_start,0,4*SCREEN_W*(SCREEN_H-height_start));
 }
 
 /* init/shutdown */
@@ -182,7 +182,7 @@ int gfx_init(const char *title) {
     SelectObject(g_memdc,g_hbm);
     frame_buffer=(unsigned int *)bits;
 
-    gfx_clear();
+    gfx_clear(0);
     return 1;
 }
 
