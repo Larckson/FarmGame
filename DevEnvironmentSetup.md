@@ -5,7 +5,7 @@ I thought I'd make an easy guide on how to get a working dev setup.
 
 # Requirements
 
-- Running a 64 bit version of Windows. Windows versions from Windows 95 to Windows 11 should be supported. Internet connection to download dependent software
+- Running a 64 bit version of Windows. Windows versions from Windows 7 to Windows 11 should be supported. Internet connection to download dependent software
 
 # Setup
 
@@ -37,7 +37,7 @@ Codeblocks is the IDE that is configured with this project and has the compiler 
 Run the following in an Admin PowerShell prompt
 
 ```powershell
-choco install codeblocks-mingw
+choco install codeblocks -y
 ```
 
 ##### Method 2 (Website)
@@ -55,7 +55,7 @@ The netwide assembler is used to compile the assembly for this project.
 Run the following in an Admin PowerShell prompt
 
 ```powershell
-choco install nasm
+choco install nasm -y
 ```
 
 ##### Method 2 (Website)
@@ -71,7 +71,7 @@ Having this in our system path will allow us to run NASM compilation steps easil
 In the admin powershell try running, if this errors you must continue with this step.
 
 ```powershell
-nasm -v.
+nasm -v
 ``` 
 
 ##### Method 1 PowerShell
@@ -94,8 +94,8 @@ Click OK.
 CodeBlocks does not come with a terminal to integrate with GIT unlike modern IDEs (e.g. VSCode, VisualStudio). Instead, I use Git Bash to interact with Git.
 This is just a plain terminal without a GUI or other overhead that takes a long time to startup or tries to mask the actual git calls that buttons do.
 
-Once this is downloaded, you should also set up GIT to both have your (username and email)[https://docs.github.com/en/get-started/git-basics/setting-your-username-in-git]
-and to have an access token to push to (github remotely with)[https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens] 
+Once this is downloaded, you should also set up GIT to both have your [username and email](https://docs.github.com/en/get-started/git-basics/setting-your-username-in-git)
+and to have an access token to push to [github remotely with](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 
 ##### Method 1 (Chocolatey)
 
@@ -105,19 +105,51 @@ choco install git
 
 ##### Method 2 (Website)
 
-Go to the (official GIT website)[https://git-scm.com]. Hit the Install for Windows Button. Run the exe and go through the setup wizard.
+Go to the [official GIT website](https://git-scm.com). Hit the Install for Windows Button. Run the exe and go through the setup wizard.
 
 ### Step 5. Clone the Repo
 
-In GitBash run the following commands. This will download the current version of the project.
+In GitBash navigate to the directory that you would like to have the project saved.
+Then run the following commands. This will download the current version of the project.
 
 ```bash
 git clone https://github.com/LarzP123/FarmGame.git
 ```
 
-### Step 6. Test
+### Step 6. Associate .cpb files with CodeBlocks
+
+##### Method 1 (PowerShell)
+
+Run the following in Admin PowerShell
+
+```
+cmd /c assoc .cbp=CodeBlocks.Project
+cmd /c ftype CodeBlocks.Project="C:\Program Files\CodeBlocks\codeblocks.exe" "%1"
+```
+
+##### Method 2 (Windows GUI)
+
+Go to the FarmGame.cbp file for this project. Right click it and then hit "Open With...".
+Then navigate to the CodeBlocks exe (`C:\Program Files\CodeBlocks\codeblocks.exe`).
+In the Window title "Select an app to open this .cbp file" choose "Always".
+
+### Step 7. Compile and Launch
 
 Double Click on the .cbp file that was downloaded. It should open the project in CodeBlocks.
 Inside of CodeBlocks either click the gear and green arrow button to run or press F9 for the shortcut.
 This should open the video game.
 
+##### Optional A. Read CodeBlocks files in Dark Mode
+
+Make sure CodeBlocks is closed.
+
+Download this file off github for other CodeBlocks color themes: https://gist.github.com/yzhong52/6852140faa233408de67
+
+Run `C:\Program Files\CodeBlocks\cb_share_config.exe` 
+Under Source Configuration choose the file you just downloaded.
+Under destination configuration file choose`C:\Users\<your user>\AppData\Roaming\CodeBlocks\default.conf`. It should find this destination path automatically.
+Then click all the check boxes on all of the themes on the left and hit transfer >>. Then click save.
+
+Open Codeblocks. In CodeBlocks go to `Settings -> Editor -> Syntax highlighting`
+Select Syntax highlighting for C/C++. Then select whatever theme you prefer.
+I find `modnokai night shift v2` and `son of obsidian` to be good dark themes.
