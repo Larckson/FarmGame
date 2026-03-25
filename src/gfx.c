@@ -20,11 +20,13 @@ struct button* but_iter = NULL; /* circular linked list */
 
 static unsigned long __stdcall button_detect_async(void* arg) {
     int *ans = (int *)arg;
+    if (but_iter == NULL) { return; } /* they closed the GUI */
     while (1) {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
+            print_int(but_iter->user_input);
+            print_text("\n");
             *ans = but_iter->user_input;
             click_x=click_y=0;
-            continue;
         }
         but_iter = but_iter->next_button;
     }
@@ -59,6 +61,7 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
 void free_buttons() {
     struct button *but_head = but_iter;
     struct button *next;
+    if (but_iter == NULL) { return; } /* they closed the GUI */
     do {
         next = but_iter->next_button;
         mem_free(but_iter);
