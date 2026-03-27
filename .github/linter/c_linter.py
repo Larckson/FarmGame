@@ -25,7 +25,6 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import List
 
-
 @dataclass
 class Violation:
     filepath: str
@@ -40,7 +39,6 @@ def strip_strings_and_comments(source: str) -> str:
     result = []
     i = 0
     n = len(source)
-
     while i < n:
         if source[i:i+2] == '/*':
             result.append('/')
@@ -55,7 +53,6 @@ def strip_strings_and_comments(source: str) -> str:
                 result.append('\n' if source[i] == '\n' else ' ')
                 i += 1
             continue
-
         if source[i:i+2] == '//':
             result.append('/')
             result.append('/')
@@ -64,7 +61,6 @@ def strip_strings_and_comments(source: str) -> str:
                 result.append(' ')
                 i += 1
             continue
-
         if source[i] == '"':
             result.append('"')
             i += 1
@@ -82,7 +78,6 @@ def strip_strings_and_comments(source: str) -> str:
                 result.append('\n' if c == '\n' else ' ')
                 i += 1
             continue
-
         if source[i] == "'":
             result.append("'")
             i += 1
@@ -100,16 +95,12 @@ def strip_strings_and_comments(source: str) -> str:
                 result.append('\n' if c == '\n' else ' ')
                 i += 1
             continue
-
         result.append(source[i])
         i += 1
-
     return ''.join(result)
-
 
 def is_snake_case(name: str) -> bool:
     return bool(re.match(r'^[a-z_][a-z0-9_]*$', name))
-
 
 _ALL_CAPS_RE = re.compile(r'^[A-Z][A-Z0-9_]*$')
 
@@ -124,7 +115,6 @@ _C_TYPE_KEYWORDS = {
     'short', 'unsigned', 'signed', 'struct', 'enum', 'union',
 }
 
-
 _SPACE_IN_EXPR_PATTERNS = [
     (r'(?<![=!<>])(\s)(=)(?!=)', "Space before '=' assignment operator"),
     (r'(?<![=!<>])(=)(?!=)(\s)', "Space after '=' assignment operator"),
@@ -138,7 +128,6 @@ _SPACE_IN_EXPR_PATTERNS = [
 ]
 
 _COMPILED_EXPR = [(re.compile(p), m) for p, m in _SPACE_IN_EXPR_PATTERNS]
-
 
 def check_spaces_in_expressions(filepath, lines, clean_lines):
     violations = []
@@ -161,7 +150,6 @@ def check_spaces_in_expressions(filepath, lines, clean_lines):
                     source_line=raw.rstrip(),
                 ))
     return violations
-
 
 def check_comma_spacing(filepath, lines, clean_lines):
     violations = []
@@ -187,7 +175,6 @@ def check_comma_spacing(filepath, lines, clean_lines):
                 source_line=raw.rstrip(),
             ))
     return violations
-
 
 _DECL_RE = re.compile(
     r'^\s*'
@@ -216,7 +203,6 @@ _FUNC_DEF_RE = re.compile(
     r'[a-zA-Z_]\w*\s*\('
 )
 
-
 def check_variable_names(filepath, lines, clean_lines):
     violations = []
     for line_idx, (raw, clean) in enumerate(zip(lines, clean_lines)):
@@ -242,7 +228,6 @@ def check_variable_names(filepath, lines, clean_lines):
                     source_line=raw.rstrip(),
                 ))
     return violations
-
 
 def check_brace_open(filepath, lines, clean_lines):
     violations = []
@@ -273,7 +258,6 @@ def check_brace_open(filepath, lines, clean_lines):
 
     return violations
 
-
 def check_brace_close(filepath, lines, clean_lines):
     violations = []
     for line_idx, (raw, clean) in enumerate(zip(lines, clean_lines)):
@@ -297,9 +281,7 @@ def check_brace_close(filepath, lines, clean_lines):
 
     return violations
 
-
 _TYPEDEF_RE = re.compile(r'\btypedef\b')
-
 
 def check_no_typedef(filepath, lines, clean_lines):
     violations = []
@@ -315,10 +297,8 @@ def check_no_typedef(filepath, lines, clean_lines):
             ))
     return violations
 
-
 _DEFINE_RE = re.compile(r'^\s*#\s*define\s+([A-Za-z_]\w*)')
 _DEFINE_OK_RE = re.compile(r'^[A-Z][A-Z0-9]*$')
-
 
 def check_define_uppercase(filepath, lines, _clean_lines):
     violations = []
@@ -338,9 +318,7 @@ def check_define_uppercase(filepath, lines, _clean_lines):
             ))
     return violations
 
-
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
-
 
 def check_include_ext(filepath, lines, _clean_lines):
     violations = []
@@ -360,7 +338,6 @@ def check_include_ext(filepath, lines, _clean_lines):
             ))
     return violations
 
-
 _FUNC_NAME_RE = re.compile(
     r'^\s*'
     r'(?:(?:static|extern|inline|const|volatile|unsigned|signed)\s+)*'
@@ -369,7 +346,6 @@ _FUNC_NAME_RE = re.compile(
     r'([a-zA-Z_]\w*)'
     r'\s*\('
 )
-
 
 def check_function_names(filepath, lines, clean_lines):
     violations = []
@@ -398,7 +374,6 @@ def check_function_names(filepath, lines, clean_lines):
             ))
     return violations
 
-
 def check_no_header_files(filepath: str) -> List[Violation]:
     if filepath.endswith('.h'):
         return [Violation(
@@ -411,25 +386,20 @@ def check_no_header_files(filepath: str) -> List[Violation]:
         )]
     return []
 
-
 def lint_file(filepath: str) -> List[Violation]:
     violations: List[Violation] = []
     violations.extend(check_no_header_files(filepath))
-
     try:
         with open(filepath, 'r', encoding='utf-8', errors='replace') as fh:
             source = fh.read()
     except OSError as exc:
         print(f"ERROR: cannot open {filepath}: {exc}", file=sys.stderr)
         return violations
-
     lines = source.splitlines()
     clean_source = strip_strings_and_comments(source)
     clean_lines = clean_source.splitlines()
-
     while len(clean_lines) < len(lines):
         clean_lines.append('')
-
     violations.extend(check_spaces_in_expressions(filepath, lines, clean_lines))
     violations.extend(check_variable_names(filepath, lines, clean_lines))
     violations.extend(check_brace_open(filepath, lines, clean_lines))
@@ -439,10 +409,8 @@ def lint_file(filepath: str) -> List[Violation]:
     violations.extend(check_include_ext(filepath, lines, clean_lines))
     violations.extend(check_function_names(filepath, lines, clean_lines))
     violations.extend(check_comma_spacing(filepath, lines, clean_lines))
-
     violations.sort(key=lambda v: (v.line_no, v.col))
     return violations
-
 
 def collect_c_files(paths: List[str]) -> List[str]:
     result = []
@@ -457,7 +425,6 @@ def collect_c_files(paths: List[str]) -> List[str]:
             result.append(str(path))
     return result
 
-
 def main() -> int:
     args = sys.argv[1:]
     if not args:
@@ -470,24 +437,18 @@ def main() -> int:
             print(f"ERROR: Could not find src/ folder at: {src_path}", file=sys.stderr)
             return 1
         args = [str(src_path)]
-
     files = collect_c_files(args)
-
     total_violations = 0
-
     for filepath in files:
         violations = lint_file(filepath)
         for v in violations:
             total_violations += 1
             print(f"{v.filepath}:{v.line_no}:{v.col} [{v.rule}] {v.message}")
-
     if total_violations:
         print(f"Lint FAILED: {total_violations} violation(s).")
         return 1
-
     print("Lint PASSED")
     return 0
-
 
 if __name__ == '__main__':
     sys.exit(main())
