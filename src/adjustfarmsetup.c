@@ -2,11 +2,11 @@
 #define ADJUSTFARMSETUP
 
 extern unsigned long get_rand(void);
-extern void read_text(char* buf, int size);
+extern void read_text(char* buf,int size);
 extern int print_int(int num);
 extern int print_char(char* c);
-extern int text_to_int(char* buf, int* out);
-extern int has_newline(char *buf, int size);
+extern int text_to_int(char* buf,int* out);
+extern int has_newline(char *buf,int size);
 
 #include "gfx.c"
 #include "initfarmsetup.c"
@@ -102,7 +102,7 @@ static unsigned long __stdcall prompt_num_async(void* arg) {
     char buf[10];
     while (1) {
         while (*verified_ans!=0) { }
-        read_text(buf, sizeof(buf));
+        read_text(buf,sizeof(buf));
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
         text_filled_buffer=has_newline(buf,sizeof(buf));
@@ -114,7 +114,7 @@ static unsigned long __stdcall prompt_num_async(void* arg) {
             continue;
         }
 
-        if (text_to_int(buf, &num_ans)!=1) {
+        if (text_to_int(buf,&num_ans)!=1) {
             print_text("Not a number. Try again.\n");
             continue;
         }
@@ -144,10 +144,10 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         base_prompt[26]=farm_iter->name;
         print_text(base_prompt);
 
-        gui_farm_minerals(farms, crops,farm_iter->name,farm_iter->name);
+        gui_farm_minerals(farms,crops,farm_iter->name,farm_iter->name);
 
-        prompt_thread=CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
-        button_thread=CreateThread(0, 0, button_detect_async, &ans, 0, 0);
+        prompt_thread=CreateThread(0,0,prompt_num_async,&ans,0,0);
+        button_thread=CreateThread(0,0,button_detect_async,&ans,0,0);
 
         while (ans==0) {
             gfx_present();
@@ -178,8 +178,8 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         farm_iter->current_crop=ans-1;
         farm_iter=farm_iter->next_farm;
 
-        TerminateThread(prompt_thread, 0);
-        TerminateThread(button_thread, 0);
+        TerminateThread(prompt_thread,0);
+        TerminateThread(button_thread,0);
         free_buttons();
     }
 }
@@ -224,8 +224,8 @@ void purchase_items(struct farm** farms,int* money) {
     gui_purchase_items_setup();
 
     print_text(base_prompt);
-    prompt_thread=CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
-    button_thread=CreateThread(0, 0, button_detect_async, &ans, 0, 0);
+    prompt_thread=CreateThread(0,0,prompt_num_async,&ans,0,0);
+    button_thread=CreateThread(0,0,button_detect_async,&ans,0,0);
 
     while (ans==0) {
         gfx_present();
@@ -268,8 +268,8 @@ void purchase_items(struct farm** farms,int* money) {
         }
     }
 
-    TerminateThread(prompt_thread, 0);
-    TerminateThread(button_thread, 0);
+    TerminateThread(prompt_thread,0);
+    TerminateThread(button_thread,0);
     free_buttons();
 }
 

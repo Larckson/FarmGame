@@ -14,6 +14,7 @@ Rules enforced for all .c files:
   7.  INCLUDE_EXT           - #include must reference a .c or .asm file.
   8.  SNAKE_CASE_FUNC       - Function definitions must have snake_case names.
   9.  NO_HEADER_FILES       - .h files are not allowed
+ 10. NO_COMMA_SPACING       - Commas must never have spaces before or after them.
 
 Exit code: 0 = clean, 1 = violations found.
 """
@@ -127,6 +128,8 @@ _C_TYPE_KEYWORDS = {
 _SPACE_IN_EXPR_PATTERNS = [
     (r'(?<![=!<>])(\s)(=)(?!=)', "Space before '=' assignment operator"),
     (r'(?<![=!<>])(=)(?!=)(\s)', "Space after '=' assignment operator"),
+    (r'(?<![+!<>])(\s)(\+)(?!\+)', "Space before '+' assignment operator"),
+    (r'(?<![+!<>])(\+)(?!\+)(\s)', "Space after '+' assignment operator"),
     (r'(\s)(\+=|-=|\*=|/=|%=)', "Space before compound assignment operator"),
     (r'(\+=|-=|\*=|/=|%=)(\s)', "Space after compound assignment operator"),
     (r'(\+\+|--)(\s+)(?=[a-zA-Z_])', "Space between '++'/'--' and its operand"),
@@ -157,6 +160,32 @@ def check_spaces_in_expressions(filepath, lines, clean_lines):
                     rule="NO_SPACE_IN_EXPR", message=msg,
                     source_line=raw.rstrip(),
                 ))
+    return violations
+
+
+def check_comma_spacing(filepath, lines, clean_lines):
+    violations = []
+    has_override = False
+    for line_idx, (raw, clean) in enumerate(zip(lines, clean_lines)):
+        line_no = line_idx + 1
+        stripped = clean.lstrip()
+        if ("comma spacing override" in raw):
+            has_override = not has_override
+        if stripped.startswith('#') or not stripped:
+            continue
+        if has_override:
+            continue
+
+        for m in re.finditer(r' ,|, ', clean):
+            col = m.start() + 1
+            violations.append(Violation(
+                filepath=filepath,
+                line_no=line_no,
+                col=col,
+                rule="NO_COMMA_SPACING",
+                message="Commas must not have spaces before or after them",
+                source_line=raw.rstrip(),
+            ))
     return violations
 
 
@@ -226,7 +255,6 @@ def check_brace_open(filepath, lines, clean_lines):
         for m in re.finditer(r'\{', clean):
             col = m.start()
 
-            # Allow space OR '=' before '{'
             if col > 0 and clean[col - 1] not in (' ', '='):
                 violations.append(Violation(
                     filepath=filepath, line_no=line_no, col=col + 1,
@@ -410,6 +438,7 @@ def lint_file(filepath: str) -> List[Violation]:
     violations.extend(check_define_uppercase(filepath, lines, clean_lines))
     violations.extend(check_include_ext(filepath, lines, clean_lines))
     violations.extend(check_function_names(filepath, lines, clean_lines))
+    violations.extend(check_comma_spacing(filepath, lines, clean_lines))
 
     violations.sort(key=lambda v: (v.line_no, v.col))
     return violations

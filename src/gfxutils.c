@@ -105,7 +105,7 @@ static int click_x=0;
 static int click_y=0;
 
 /* window procedure */
-static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *lp) {
+static void * __stdcall wnd_proc(void *hwnd,unsigned int msg,void *wp,void *lp) {
     switch (msg) {
         case 0x0002: { /* VM_DESTROY */
             g_running=0;
@@ -127,7 +127,7 @@ static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *l
             return 0;
         }
     }
-    return DefWindowProcA(hwnd, msg, wp, lp);
+    return DefWindowProcA(hwnd,msg,wp,lp);
 }
 
 void gfx_clear(int height_start) {
@@ -140,7 +140,7 @@ int gfx_init(const char *title) {
     struct rect window_rect;
     void *bits;
     union {
-        void *(__stdcall *fn)(void*, unsigned int, void*, void*);
+        void *(__stdcall *fn)(void*,unsigned int,void*,void*);
         void *ptr;
     } proc_cast;
 
@@ -159,9 +159,9 @@ int gfx_init(const char *title) {
 
     g_hwnd=CreateWindowExA(
         0,"GfxWnd",title,
-        0x10CF0000,((int)0x80000000),((int)0x80000000), /* WS_OVERLAPPEDWINDOW&WS_VISIBLE, CW_USEDEFAULT */
+        0x10CF0000,((int)0x80000000),((int)0x80000000),/* WS_OVERLAPPEDWINDOW&WS_VISIBLE, CW_USEDEFAULT */
         window_rect.right-window_rect.left,window_rect.bottom-window_rect.top,
-        0, 0, GetModuleHandleA(0), 0
+        0,0,GetModuleHandleA(0),0
     );
     if (!g_hwnd) { return 0; }
 
@@ -244,14 +244,14 @@ void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color)
 }
 
 void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
-    int x_iter, y_iter;
+    int x_iter,y_iter;
 
     for (y_iter=0;y_iter<height;y_iter++) {
         for (x_iter=0;x_iter<width;x_iter++) {
 
             /* diagonal pattern */
-            if (((x_iter + y_iter) % spacing) == 0) {
-                gfx_put_pixel(left_x + x_iter, top_y + y_iter, color);
+            if (((x_iter+y_iter)%spacing) == 0) {
+                gfx_put_pixel(left_x+x_iter,top_y+y_iter,color);
             }
         }
     }

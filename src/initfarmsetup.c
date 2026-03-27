@@ -10,7 +10,7 @@ extern void  mem_free(void* ptr);
 
 #define MINERALCOUNT 5
 const char mineral_names[MINERALCOUNT][3]={ "N","K","Mo","P","C" };
-const unsigned int mineral_colors[MINERALCOUNT]={ RED, GREEN, BLUE, MAGENTA, YELLOW };
+const unsigned int mineral_colors[MINERALCOUNT]={ RED,GREEN,BLUE,MAGENTA,YELLOW };
 
 struct farm {
     int minerals[MINERALCOUNT];

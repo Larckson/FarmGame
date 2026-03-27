@@ -6,6 +6,7 @@ This makes the bitmaps for the different chars more distinct in code editors */
     (((a)<<7)|((b)<<6)|((c)<<5)|((d)<<4)|((e)<<3)|((f)<<2)|((g)<<1)|(h)))
 
 static const unsigned char gfx_font[96][8]={
+    /* Begin comma spacing override to allow for easily visible characters */
     { /* 32 space */
         BITTOBYTE(0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ),
         BITTOBYTE(0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ),
@@ -966,6 +967,7 @@ static const unsigned char gfx_font[96][8]={
         BITTOBYTE(X(),X(),X(),X(),X(),X(),X(),X()),
         BITTOBYTE(X(),X(),X(),X(),X(),X(),X(),X())
     }
+    /* End comma spacing override */
 };
 
 #undef X

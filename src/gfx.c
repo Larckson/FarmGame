@@ -1,14 +1,14 @@
 #ifndef GFX
 #define GFX
 
-extern void int_to_str(int num, char* buf);
+extern void int_to_str(int num,char* buf);
 
 #include "gfxutils.c"
 #include "initfarmsetup.c"
 
-void * __stdcall CreateThread(void *, unsigned long, unsigned long(__stdcall *)(void *), void *, unsigned long, unsigned long *);
-void __stdcall WaitForSingleObject(void *, unsigned long);
-void __stdcall TerminateThread(void *, unsigned long);
+void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
+void __stdcall WaitForSingleObject(void *,unsigned long);
+void __stdcall TerminateThread(void *,unsigned long);
 
 struct button {
     int left_x,top_y,right_x,bot_y;
@@ -55,16 +55,16 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
     if (is_char) {
         but_iter->user_input=-set_user_input;
         gfx_rect_fill(set_left_x,set_top_y,set_width,set_height,RED);
-        text_pos=gfx_draw_char(set_left_x+10,set_top_y+10, set_user_input, WHITE);
+        text_pos=gfx_draw_char(set_left_x+10,set_top_y+10,set_user_input,WHITE);
     } else {
         but_iter->user_input=set_user_input;
         gfx_rect_fill(set_left_x,set_top_y,set_width,set_height,BLUE);
-        int_to_str(set_user_input, num_buf);
-        text_pos=gfx_draw_string(set_left_x+10,set_top_y+10, num_buf, WHITE);
+        int_to_str(set_user_input,num_buf);
+        text_pos=gfx_draw_string(set_left_x+10,set_top_y+10,num_buf,WHITE);
     }
     gfx_rect(set_left_x,set_top_y,set_width,set_height,selected?YELLOW:WHITE);
-    text_pos=gfx_draw_char(text_pos,set_top_y+10, ':', WHITE);
-    text_pos=gfx_draw_string(text_pos,set_top_y+10, set_text, WHITE);
+    text_pos=gfx_draw_char(text_pos,set_top_y+10,':',WHITE);
+    text_pos=gfx_draw_string(text_pos,set_top_y+10,set_text,WHITE);
 }
 
 void free_buttons() {
@@ -79,18 +79,18 @@ void free_buttons() {
     but_iter=NULL;
 }
 
-void gui_basic_utils(int money, int year) {
+void gui_basic_utils(int money,int year) {
     char num_buf[10];int text_pos=5;
 
     if (!gfx_present()) { return; }
     gfx_clear(0);
 
-    int_to_str(year, num_buf);
+    int_to_str(year,num_buf);
     text_pos=gfx_draw_string(text_pos,5,"Year:",WHITE);
     text_pos=gfx_draw_string(text_pos,5,num_buf,WHITE);
     text_pos=gfx_draw_string(text_pos,5,"  ",WHITE);
 
-    int_to_str(money, num_buf);
+    int_to_str(money,num_buf);
     text_pos=gfx_draw_string(text_pos,5,"Money:$",WHITE);
     text_pos=gfx_draw_string(text_pos,5,num_buf,WHITE);
 }
@@ -102,7 +102,7 @@ void feedback_update(char* string) {
     gfx_draw_string(gfx_draw_string(10,580,"Invalid Input:",RED),580,string,RED);
 }
 
-void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_select,char farm_view) {
+void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_select,char farm_view) {
     char full_farm_name[]="Farm _";
     int button_x=20,n,bar_height;
     char num_buf[10];
@@ -127,7 +127,7 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
             gfx_rect(50,85,MINERALCOUNT*20+30,165,WHITE);
             for (n=1;n<=5;n++) {
                 gfx_hline(50,60,250-30*n,WHITE);
-                int_to_str(n*20, num_buf);
+                int_to_str(n*20,num_buf);
                 gfx_draw_char(gfx_draw_string(50,240-30*n,num_buf,WHITE),240-30*n,'%',WHITE);
             }
 
@@ -144,15 +144,11 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
                     gfx_draw_string(300,100+40*n,crop_iter->name,WHITE);
                 }
 
-                gfx_draw_string(gfx_draw_char(450,100+40*n,'^', WHITE)
-                    ,100+40*n,mineral_names[crop_iter->mineral_add],mineral_colors[crop_iter->mineral_add]);
+                gfx_draw_string(gfx_draw_char(450,100+40*n,'^',WHITE),100+40*n,mineral_names[crop_iter->mineral_add],mineral_colors[crop_iter->mineral_add]);
 
-                gfx_draw_string(gfx_draw_char(500,100+40*n,'v', WHITE)
-                    ,100+40*n,mineral_names[crop_iter->mineral_del],mineral_colors[crop_iter->mineral_del]);
+                gfx_draw_string(gfx_draw_char(500,100+40*n,'v',WHITE),100+40*n,mineral_names[crop_iter->mineral_del],mineral_colors[crop_iter->mineral_del]);
 
-                int_to_str(crop_iter->price, num_buf);
-                gfx_draw_string(gfx_draw_char(550,100+40*n,'$', WHITE)
-                    ,100+40*n,num_buf,WHITE);
+                int_to_str(crop_iter->price,num_buf);gfx_draw_string(gfx_draw_char(550,100+40*n,'$',WHITE),100+40*n,num_buf,WHITE);
 
                 crop_iter=crop_iter->next_crop;
                 n++;
@@ -171,7 +167,7 @@ void gui_purchase_items_setup() {
     if (!gfx_present()) { return; }
     gfx_clear(15);
 
-    add_button(50, 50,200,40,"Do Nothing",1,0,0);
+    add_button(50,50,200,40,"Do Nothing",1,0,0);
     add_button(50,100,200,40,"Buy Farm (-$50)",2,0,0);
     add_button(50,150,200,40,"Sell Farm (+$50)",3,0,0);
 }
