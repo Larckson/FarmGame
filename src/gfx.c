@@ -2,6 +2,7 @@
 #define GFX
 
 extern void int_to_str(int num,char* buf);
+static volatile int thread_stop=0;
 
 #ifdef _WIN32
     #include "gfxwindows.c"
@@ -14,61 +15,89 @@ extern void int_to_str(int num,char* buf);
 
     /* --- Windows thread API (manual declarations, no headers) --- */
     void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
-    void __stdcall WaitForSingleObject(void *,unsigned long);
     void __stdcall TerminateThread(void *,unsigned long);
 
 #else
+/* --- Linux syscalls (no pthreads, no libc dependency required) --- */
+extern long clone(long (*fn)(void *),void *stack,int flags,void *arg);
+extern int tgkill(int tgid,int tid,int sig);
+extern int getpid(void);
+extern int gettid(void);
+extern void *mmap(void*,unsigned long,int,int,int,long);
+extern void setup_signals(void);
 
-    /* --- Linux syscalls (no pthreads, no libc dependency required) --- */
-    extern long clone(long (*fn)(void *),void *stack,int flags,void *arg);
-    extern int tgkill(int tgid,int tid,int sig);
-    extern int getpid(void);
-    extern int gettid(void);
+#define PROT_READ       0x1
+#define PROT_WRITE      0x2
+#define MAP_PRIVATE     0x02
+#define MAP_ANONYMOUS   0x20
+#define MAP_STACK       0x20000
+#define MAP_FAILED      ((void *)-1)
+#define STACK_SIZE      524288
+#define SIGUSR1         10
 
-    #define STACK_SIZE 65536
+/* clone flags: thread-like behavior */
+#define CLONE_FLAGS ( \
+    0x00000100 |  /* CLONE_VM       - share memory space    */ \
+    0x00000200 |  /* CLONE_FS       - share filesystem info */ \
+    0x00000400 |  /* CLONE_FILES    - share file descriptors*/ \
+    0x00000800 |  /* CLONE_SIGHAND  - share signal handlers */ \
+    0x00010000 |  /* CLONE_THREAD   - same thread group     */ \
+    0x80000000 )  /* CLONE_IO       - share IO context      */
 
-    /* clone flags: thread-like behavior */
-    #define CLONE_FLAGS (0x00000100 | 0x00000200 | 0x00000400)
+/* --- CreateThread replacement --- */
+/* --- CreateThread replacement --- */
+static void *CreateThread(void *lpThreadAttributes,
+                          unsigned long dwStackSize,
+                          long (*lpStartAddress)(void *),
+                          void *lpParameter,
+                          unsigned long dwCreationFlags,
+                          unsigned long *lpThreadId)
+{
+    (void)lpThreadAttributes;
+    (void)dwStackSize;
+    (void)dwCreationFlags;
 
-    /* --- CreateThread replacement --- */
-    static void *CreateThread(void *lpThreadAttributes,
-                              unsigned long dwStackSize,
-                              long (*lpStartAddress)(void *),
-                              void *lpParameter,
-                              unsigned long dwCreationFlags,
-                              unsigned long *lpThreadId)
-    {
-        static char stack[STACK_SIZE];
+    char *stack = (char *)mmap((void*)0, STACK_SIZE,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+                               -1, 0);
+    if (stack == MAP_FAILED)
+        return (void *)-1;
 
-        (void)lpThreadAttributes;
-        (void)dwStackSize;
-        (void)dwCreationFlags;
+    /* compute 16-byte aligned stack top */
+    unsigned long stack_top = (unsigned long)(stack + STACK_SIZE);
+    stack_top &= ~0xFUL; /* align down to 16 */
 
-        void *tid = (void*)clone(lpStartAddress, stack + STACK_SIZE, CLONE_FLAGS, lpParameter);
+    long tid = clone(lpStartAddress,
+                     (void*)stack_top,
+                     CLONE_FLAGS,
+                     lpParameter);
 
-        if (lpThreadId) {
-            *lpThreadId = (unsigned long)tid;
-        }
+    if (lpThreadId)
+        *lpThreadId = (unsigned long)tid;
 
-        return tid;
-    }
+    return (void*)(long)tid;
+}
 
-    /* --- WaitForSingleObject (stub/no-op for now) --- */
-    static void WaitForSingleObject(void *handle,unsigned long milliseconds)
-    {
-        (void)handle;
-        (void)milliseconds;
-        /* no-op (could be implemented with futex if needed) */
-    }
-
-    /* --- TerminateThread replacement --- */
-    static void TerminateThread(void *thread,unsigned long exit_code)
-    {
-        (void)exit_code;
-        tgkill(getpid(), (int)(long)thread, 9); /* SIGKILL */
-    }
+/* --- TerminateThread replacement --- */
+static void TerminateThread(void *thread,unsigned long exit_code)
+{
+    (void)exit_code;
+    while (tgkill(getpid(), (int)(long)thread, 0) == 0) {}
+}
 
 #endif
+
+static void TerminateReadThread(void *thread,unsigned long exit_code)
+{
+#ifndef _WIN32
+    (void)exit_code;
+    tgkill(getpid(), (int)(long)thread, SIGUSR1);
+    while (tgkill(getpid(), (int)(long)thread, 0) == 0) {}
+#else
+    TerminateThread(thread, exit_code);
+#endif
+}
 
 struct button {
     int left_x,top_y,right_x,bot_y;
@@ -166,7 +195,7 @@ static long button_detect_async(void* arg) {
 #endif
     int *ans=(int *)arg;
     if (but_iter==NULL) { return 0; }
-    while (1) {
+    while (!thread_stop) {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
             if (but_iter->user_input>=0) {
                 print_int(but_iter->user_input);
@@ -218,7 +247,7 @@ void free_buttons() {
         next=but_iter->next_button;
         mem_free(but_iter);
         but_iter=next;
-    } while (but_iter!=but_head);
+    } while (but_iter!=NULL && but_iter!=but_head);
     but_iter=NULL;
 }
 

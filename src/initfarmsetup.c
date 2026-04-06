@@ -70,7 +70,7 @@ struct crop* create_initial_crops() {
     crop_iter->price=40;
     crop_iter->next_crop=crop_iter+1;
     crop_iter=crop_iter->next_crop;
-    copy_string(crop_iter->name,"Potatoes");
+    copy_string(crop_iter->name,"Potato");
     crop_iter->mineral_add=4;
     crop_iter->mineral_del=0;
     crop_iter->price=40;

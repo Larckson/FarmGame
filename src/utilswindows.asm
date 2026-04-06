@@ -5,6 +5,7 @@ global print_text
 global read_text
 global print_char
 global print_int
+global setup_signals
 
 extern GetSystemTimeAsFileTime
 extern GetProcessHeap
@@ -463,4 +464,7 @@ int_to_str:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+setup_signals:
     ret

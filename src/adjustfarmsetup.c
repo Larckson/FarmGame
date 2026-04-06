@@ -105,12 +105,12 @@ static long prompt_num_async(void* arg) {
     int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
+        if (thread_stop) { return 0; }
         while (*verified_ans!=0) {
-            while (*verified_ans != 0) {
-            }
-
+            if (thread_stop) { return 0; }
         }
         read_text(buf,sizeof(buf));
+        if (thread_stop) { return 0; }
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
         text_filled_buffer=has_newline(buf,sizeof(buf));
@@ -185,9 +185,10 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         }
         farm_iter->current_crop=ans-1;
         farm_iter=farm_iter->next_farm;
-
-        TerminateThread(prompt_thread,0);
+        thread_stop=1;
+        TerminateReadThread(prompt_thread,0);
         TerminateThread(button_thread,0);
+        thread_stop=0;
         free_buttons();
     }
 }
@@ -275,9 +276,10 @@ void purchase_items(struct farm** farms,int* money) {
             }
         }
     }
-
-    TerminateThread(prompt_thread,0);
+    thread_stop=1;
+    TerminateReadThread(prompt_thread,0);
     TerminateThread(button_thread,0);
+    thread_stop=0;
     free_buttons();
 }
 

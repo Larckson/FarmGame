@@ -15,6 +15,11 @@ global text_to_int
 global has_newline
 global int_to_str
 
+global setup_signals
+
+%define SYS_SIGACTION 13
+%define SIGUSR1       10
+
 ; ─────────────────────────────────────────────────────────────────
 ; LINUX SYSCALL NUMBERS (x86-64)
 ; ─────────────────────────────────────────────────────────────────
@@ -41,6 +46,7 @@ section .bss
     char_buf resb 1
     int_buf  resb 32
     timespec resq 2             ; [0] = tv_sec, [1] = tv_nsec
+    sigaction_buf resb 32
 
 ; ─────────────────────────────────────────────────────────────────
 ; INITIALISED DATA
@@ -164,30 +170,51 @@ read_text:
     push    rbx
     push    r12
 
-    mov     rbx, rdi
-    mov     r12, rsi
+    mov     rbx, rdi        ; buffer
+    mov     r12, rsi        ; capacity
 
+.retry:
     mov     rax, SYS_READ
     mov     rdi, STDIN_FD
     mov     rsi, rbx
     mov     rdx, r12
-    syscall
+    syscall                 ; rax = bytes_read or -errno
 
-    mov     rsi, rbx
-.read_text_find_lf:
-    movzx   eax, byte [rsi]
-    test    al, al
-    jz      .read_text_done
-    cmp     al, 0x0A
-    je      .read_text_terminate
-    inc     rsi
-    jmp     .read_text_find_lf
-.read_text_terminate:
-    mov     byte [rsi], 0
-.read_text_done:
+    ; rax < 0  → error / EINTR / signal
+    test    rax, rax
+    js      .interrupted
+
+    ; rax == 0 → EOF / no data
+    jz      .empty
+
+    ; normal read
+    cmp     rax, r12
+    jge     .full           ; clamp if exactly full or more
+
+    mov     byte [rbx + rax], 0
+    jmp     .done
+
+.full:
+    mov     byte [rbx + r12 - 1], 0
+    jmp     .done
+
+.empty:
+    mov     byte [rbx], 0
+    xor     eax, eax        ; return 0
+    jmp     .done
+
+.interrupted:
+    ; read was interrupted by SIGUSR1 (or other signal)
+    ; treat as "no input" and return 0 safely
+    mov     byte [rbx], 0
+    xor     eax, eax        ; return 0
+    jmp     .done
+
+.done:
     pop     r12
     pop     rbx
     ret
+
 
 ; print_int(long long num) → rax
 ; rdi = signed 64-bit integer
@@ -355,27 +382,22 @@ text_to_int:
     ret
 
 ; has_newline(char* buf, int len) -> rax
-; Linux: rdi = buf, esi = len
+; rdi = buf, esi = len
 has_newline:
-    mov     rcx, rdi
-    mov     edx, esi
     xor     eax, eax
-
 .loop:
-    cmp     eax, edx
+    cmp     eax, esi
     jge     .not_found
-
-    mov     r8b, [rcx + rax]
-    cmp     r8b, 10
+    movzx   r8d, byte [rdi + rax]
+    test    r8b, r8b
+    jz      .not_found          ; hit null terminator before \n = no newline
+    cmp     r8b, 0x0A
     je      .found
-
     inc     eax
     jmp     .loop
-
 .found:
     mov     eax, 1
     ret
-
 .not_found:
     xor     eax, eax
     ret
@@ -428,4 +450,51 @@ int_to_str:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+; no-op signal handler
+sigusr1_handler:
+    ret
+
+; robust setup_signals - zero buffer, install no-op handler, check syscall result
+section .data
+sig_setup_fail_msg: db "setup_signals: sigaction failed", 10, 0
+
+section .text
+global setup_signals
+
+setup_signals:
+    ; zero sigaction_buf (32 bytes)
+    lea     rax, [rel sigaction_buf]
+    xor     rcx, rcx
+.zero_loop:
+    mov     byte [rax + rcx], 0
+    inc     rcx
+    cmp     rcx, 32
+    jb      .zero_loop
+
+    ; fill sigaction_buf
+    lea     rcx, [rel sigusr1_handler]
+    mov     [rax], rcx        ; sa_handler (offset 0)
+    mov     qword [rax + 8], 0    ; sa_flags = 0 (no SA_RESTART)
+    mov     qword [rax + 16], 0   ; sa_restorer = NULL
+    mov     qword [rax + 24], 0   ; sa_mask = 0
+
+    ; syscall: rt_sigaction(SIGUSR1, &sigaction_buf, NULL, sizeof(sigset_t))
+    mov     rax, SYS_SIGACTION
+    mov     rdi, SIGUSR1
+    lea     rsi, [rel sigaction_buf]
+    xor     rdx, rdx
+    mov     r10, 8
+    syscall
+
+    ; check return value (rax == 0 on success)
+    test    rax, rax
+    jz      .setup_done
+
+    ; on error, print a diagnostic (non-fatal) so you can see failure under gdb/run
+    lea     rdi, [rel sig_setup_fail_msg]
+    call    print_text
+
+.setup_done:
     ret

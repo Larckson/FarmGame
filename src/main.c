@@ -2,8 +2,10 @@
 /* lskdjfssdddfssfsfsfssfsdadasdfssfsfsxvxvxvxsfdscdafsfavxvxxvxl */
 extern unsigned long get_time();
 extern void set_rand(unsigned long seed);
+extern void setup_signals();
 
 int main() {
+    setup_signals();
     int year;
     int money=50;
     struct crop* crops=create_initial_crops();
