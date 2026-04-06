@@ -96,12 +96,20 @@ int farm_growth_effects(struct farm* farms,struct crop* crops) {
     return money_increase;
 }
 
+#ifdef _WIN32
 static unsigned long __stdcall prompt_num_async(void* arg) {
+#else
+static long prompt_num_async(void* arg) {
+#endif
     int *verified_ans=(int *)arg;
     int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
-        while (*verified_ans!=0) { }
+        while (*verified_ans!=0) {
+            while (*verified_ans != 0) {
+            }
+
+        }
         read_text(buf,sizeof(buf));
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */

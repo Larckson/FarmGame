@@ -6,6 +6,15 @@ global read_text
 global print_char
 global print_int
 
+global abs_val
+global copy_string
+global mem_set
+global get_rand
+global set_rand
+global text_to_int
+global has_newline
+global int_to_str
+
 ; ─────────────────────────────────────────────────────────────────
 ; LINUX SYSCALL NUMBERS (x86-64)
 ; ─────────────────────────────────────────────────────────────────
@@ -33,15 +42,20 @@ section .bss
     int_buf  resb 32
     timespec resq 2             ; [0] = tv_sec, [1] = tv_nsec
 
+; ─────────────────────────────────────────────────────────────────
+; INITIALISED DATA
+; ─────────────────────────────────────────────────────────────────
+section .data
+    seed    dq 6364136223846793005
+    lcg_inc dq 1442695040888963407
+
+; ─────────────────────────────────────────────────────────────────
+; CODE
+; ─────────────────────────────────────────────────────────────────
 section .text
 
-; ═════════════════════════════════════════════════════════════════
 ; get_time() → rax
-;
-;   Returns the current Unix timestamp (seconds since 1970-01-01).
-;   clock_gettime(CLOCK_REALTIME) fills timespec; tv_sec is
-;   already the Unix epoch second count so no conversion is needed.
-; ═════════════════════════════════════════════════════════════════
+; returns Unix timestamp (seconds since epoch)
 get_time:
     mov     rax, SYS_CLOCK_GETTIME
     mov     rdi, CLOCK_REALTIME
@@ -51,15 +65,8 @@ get_time:
     mov     rax, [rel timespec]     ; tv_sec
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; mem_alloc(size_t size) → rax
-;   rdi = number of bytes to allocate
-;
-;   Uses mmap with an 8-byte size header so mem_free can recover
-;   the length for munmap. Returns ptr+8 to the caller, matching
-;   the same opaque-pointer contract as the Windows version.
-; ═════════════════════════════════════════════════════════════════
+; rdi = size
 mem_alloc:
     push    rbx
     mov     rbx, rdi
@@ -75,25 +82,21 @@ mem_alloc:
 
     test    rax, rax
     js      .mem_alloc_done
-    mov     [rax], rbx          ; store requested size in header
+    mov     [rax], rbx          ; store requested size
     add     rax, 8              ; return pointer past header
-
 .mem_alloc_done:
     pop     rbx
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; mem_free(void* ptr)
-;   rdi = pointer previously returned by mem_alloc
-; ═════════════════════════════════════════════════════════════════
+; rdi = pointer returned by mem_alloc
 mem_free:
     push    rbx
     mov     rbx, rdi
 
-    sub     rbx, 8              ; step back to size header
-    mov     rsi, [rbx]          ; recover original requested size
-    add     rsi, 8              ; total mapping length including header
+    sub     rbx, 8              ; back to header
+    mov     rsi, [rbx]          ; original size
+    add     rsi, 8              ; include header
 
     mov     rax, SYS_MUNMAP
     mov     rdi, rbx
@@ -102,11 +105,8 @@ mem_free:
     pop     rbx
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; print_char(char* c)
-;   rdi = pointer to a single character to print
-; ═════════════════════════════════════════════════════════════════
+; rdi = pointer to single char
 print_char:
     push    rbx
     mov     rbx, rdi
@@ -125,11 +125,8 @@ print_char:
     pop     rbx
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; print_text(const char* s) → rax
-;   rdi = pointer to null-terminated string
-; ═════════════════════════════════════════════════════════════════
+; rdi = null-terminated string
 print_text:
     push    rbx
     push    r12
@@ -161,14 +158,8 @@ print_text:
     pop     rbx
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; read_text(char* buf, int size)
-;   rdi = pointer to caller-supplied buffer
-;   rsi = capacity of the buffer in bytes
-;
-;   Strips the trailing \n (0x0A) that Linux line input includes.
-; ═════════════════════════════════════════════════════════════════
+; rdi = buffer, rsi = capacity
 read_text:
     push    rbx
     push    r12
@@ -198,11 +189,8 @@ read_text:
     pop     rbx
     ret
 
-
-; ═════════════════════════════════════════════════════════════════
 ; print_int(long long num) → rax
-;   rdi = integer to print (signed 64-bit)
-; ═════════════════════════════════════════════════════════════════
+; rdi = signed 64-bit integer
 print_int:
     push    rbx
     push    r12
@@ -255,6 +243,188 @@ print_int:
 
     pop     r15
     pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; abs_val(int x) -> eax
+; Linux: edi = x
+abs_val:
+    mov     eax, edi
+    mov     edx, eax
+    sar     edx, 31
+    add     eax, edx
+    xor     eax, edx
+    ret
+
+; copy_string(char* d, char* s)
+; Linux: rdi = d, rsi = s
+copy_string:
+    mov     r8,  rdi
+    mov     r9,  rsi
+.copy_string_loop:
+    mov     al,  [r9]
+    mov     [r8], al
+    inc     r9
+    inc     r8
+    test    al, al
+    jne     .copy_string_loop
+    ret
+
+; mem_set(void* dst, int val, unsigned int n)
+; Linux: rdi = dst, rsi = val, rdx = n
+mem_set:
+    test    edx, edx
+    jz      .mem_set_done
+    movzx   eax, sil
+.mem_set_loop:
+    mov     [rdi], al
+    inc     rdi
+    dec     edx
+    jnz     .mem_set_loop
+.mem_set_done:
+    ret
+
+; set_rand(unsigned long seed_val)
+; Linux: rdi = seed_val
+set_rand:
+    mov     [rel seed], rdi
+    ret
+
+; get_rand() -> rax
+get_rand:
+    mov     rax, [rel seed]
+    mov     rcx, 6364136223846793005
+    imul    rax, rcx
+    add     rax, [rel lcg_inc]
+    mov     [rel seed], rax
+    shr     rax, 33
+    ret
+
+; text_to_int(char* buf, int* out) -> rax
+; Linux: rdi = buf, rsi = out
+text_to_int:
+    push    rbx
+    push    r12
+
+    mov     rbx, rdi
+    mov     r12, rsi
+    xor     ecx, ecx            ; accumulator
+    xor     r8d, r8d            ; negative flag
+    xor     r9d, r9d            ; digit count
+
+    movzx   eax, byte [rbx]
+    cmp     al, '-'
+    jne     .text_to_int_digits
+    mov     r8d, 1
+    inc     rbx
+
+.text_to_int_digits:
+    movzx   eax, byte [rbx]
+    cmp     al, '0'
+    jl      .text_to_int_done
+    cmp     al, '9'
+    jg      .text_to_int_done
+    sub     al, '0'
+    imul    ecx, ecx, 10
+    add     ecx, eax
+    inc     r9d
+    inc     rbx
+    jmp     .text_to_int_digits
+
+.text_to_int_done:
+    test    r9d, r9d
+    jz      .text_to_int_fail
+
+    test    r8d, r8d
+    jz      .text_to_int_store
+    neg     ecx
+
+.text_to_int_store:
+    mov     [r12], ecx
+    mov     eax, 1
+    jmp     .text_to_int_ret
+
+.text_to_int_fail:
+    xor     eax, eax
+
+.text_to_int_ret:
+    pop     r12
+    pop     rbx
+    ret
+
+; has_newline(char* buf, int len) -> rax
+; Linux: rdi = buf, esi = len
+has_newline:
+    mov     rcx, rdi
+    mov     edx, esi
+    xor     eax, eax
+
+.loop:
+    cmp     eax, edx
+    jge     .not_found
+
+    mov     r8b, [rcx + rax]
+    cmp     r8b, 10
+    je      .found
+
+    inc     eax
+    jmp     .loop
+
+.found:
+    mov     eax, 1
+    ret
+
+.not_found:
+    xor     eax, eax
+    ret
+
+; int_to_str(long long num, char* buf)
+; Linux: rdi = num, rsi = buf
+int_to_str:
+    push    rbx
+    push    r12
+    push    r13
+
+    movsx   rbx, edi
+    mov     r12, rsi
+
+    lea     r13, [rel int_buf]
+    mov     byte [r13+31], 0
+    mov     rcx, 30
+
+    xor     r8, r8
+    test    rbx, rbx
+    jns     .convert
+    mov     r8, 1
+    neg     rbx
+
+.convert:
+    mov     rax, rbx
+    mov     rbx, 10
+.digit_loop:
+    xor     rdx, rdx
+    div     rbx
+    add     dl, '0'
+    mov     [r13+rcx], dl
+    dec     rcx
+    test    rax, rax
+    jnz     .digit_loop
+
+    test    r8, r8
+    jz      .copy
+    mov     byte [r13+rcx], '-'
+    dec     rcx
+
+.copy:
+    inc     rcx
+    lea     r9, [r13+rcx]       ; source
+
+    mov     rdi, r12            ; dst
+    mov     rsi, r9             ; src
+    call    copy_string
+
     pop     r13
     pop     r12
     pop     rbx

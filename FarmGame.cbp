@@ -34,9 +34,9 @@
 			<Add option="-std=c89 -pedantic-errors" />
 		</Compiler>
 		<Linker>
-			<Add library="obj/Debug/utils.obj" />
 			<Add library="gdi32" />
 			<Add library="user32" />
+			<Add library="obj/Debug/utils.obj" />
 		</Linker>
 		<Unit filename="src/adjustfarmsetup.c">
 			<Option compilerVar="CC" />
@@ -53,7 +53,12 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="src/gfxutils.c">
+		<Unit filename="src/gfxlinux.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="src/gfxwindows.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />
@@ -65,17 +70,30 @@
 		</Unit>
 		<Unit filename="src/main.c">
 			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option weight="60" />
+			<Option compiler="gcc" use="1" buildCommand='wsl bash -c &quot;gcc -c $(wslpath -u \&quot;$file\&quot;) -o $(wslpath -u \&quot;$object\&quot;)&quot;\n' />
 		</Unit>
 		<Unit filename="src/pack.c">
 			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
 		</Unit>
 		<Unit filename="src/utils.asm">
 			<Option compilerVar="CC" />
 			<Option link="0" />
 			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utils.obj' />
 		</Unit>
-		<Unit filename="src/utilslinux.asm" />
-		<Unit filename="src/utilswindows.asm" />
+		<Unit filename="src/utilslinux.asm">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utilslinux.obj' />
+		</Unit>
+		<Unit filename="src/utilswindows.asm">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utilswindows.obj' />
+		</Unit>
 		<Extensions>
 			<lib_finder disable_auto="1" />
 		</Extensions>
