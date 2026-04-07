@@ -2,7 +2,6 @@
 #define GFX
 
 extern void int_to_str(int num,char* buf);
-static volatile int thread_stop=0;
 
 #ifdef _WIN32
     #include "gfxwindows.c"
@@ -13,9 +12,7 @@ static volatile int thread_stop=0;
 
 #ifdef _WIN32
 
-    /* --- Windows thread API (manual declarations, no headers) --- */
     void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
-    void __stdcall TerminateThread(void *,unsigned long);
 
 #else
 /* --- Linux syscalls (no pthreads, no libc dependency required) --- */
@@ -24,7 +21,6 @@ extern int tgkill(int tgid,int tid,int sig);
 extern int getpid(void);
 extern int gettid(void);
 extern void *mmap(void*,unsigned long,int,int,int,long);
-extern void setup_signals(void);
 
 #define PROT_READ       0x1
 #define PROT_WRITE      0x2
@@ -44,7 +40,6 @@ extern void setup_signals(void);
     0x00010000 |  /* CLONE_THREAD   - same thread group     */ \
     0x80000000 )  /* CLONE_IO       - share IO context      */
 
-/* --- CreateThread replacement --- */
 /* --- CreateThread replacement --- */
 static void *CreateThread(void *lpThreadAttributes,
                           unsigned long dwStackSize,
@@ -79,25 +74,7 @@ static void *CreateThread(void *lpThreadAttributes,
     return (void*)(long)tid;
 }
 
-/* --- TerminateThread replacement --- */
-static void TerminateThread(void *thread,unsigned long exit_code)
-{
-    (void)exit_code;
-    while (tgkill(getpid(), (int)(long)thread, 0) == 0) {}
-}
-
 #endif
-
-static void TerminateReadThread(void *thread,unsigned long exit_code)
-{
-#ifndef _WIN32
-    (void)exit_code;
-    tgkill(getpid(), (int)(long)thread, SIGUSR1);
-    while (tgkill(getpid(), (int)(long)thread, 0) == 0) {}
-#else
-    TerminateThread(thread, exit_code);
-#endif
-}
 
 struct button {
     int left_x,top_y,right_x,bot_y;
@@ -188,14 +165,9 @@ int gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color)
     return char_x;
 }
 
-#ifdef _WIN32
-static unsigned long __stdcall button_detect_async(void* arg) {
-#else
-static long button_detect_async(void* arg) {
-#endif
-    int *ans=(int *)arg;
-    if (but_iter==NULL) { return 0; }
-    while (!thread_stop) {
+static int button_detect(int* ans) {
+    struct button *but_head=but_iter;
+    do {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
             if (but_iter->user_input>=0) {
                 print_int(but_iter->user_input);
@@ -205,7 +177,7 @@ static long button_detect_async(void* arg) {
             click_x=click_y=0;
         }
         but_iter=but_iter->next_button;
-    }
+    } while (but_iter!=NULL && but_iter!=but_head);
 }
 
 void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input,int is_char,int selected) {

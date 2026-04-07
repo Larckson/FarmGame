@@ -5,7 +5,6 @@ global print_text
 global read_text
 global print_char
 global print_int
-global setup_signals
 
 extern GetSystemTimeAsFileTime
 extern GetProcessHeap
@@ -181,45 +180,56 @@ print_text:
     ret
 
 ; read_text(char* buf, int size)
-; rcx = buffer, rdx = capacity
+; Windows x64: rcx = buffer, rdx = capacity
 read_text:
     push    rbp
     mov     rbp, rsp
     push    rbx
     push    rdi
-    sub     rsp, 48
+    push    rsi
+    sub     rsp, 40                 ; 32 bytes shadow + 8 scratch, keep 16‑byte alignment
 
-    mov     rbx, rcx
-    mov     rdi, rdx
+    mov     rbx, rcx                ; rbx = buffer
+    mov     rdi, rdx                ; rdi = capacity
 
+    ; GetStdHandle(STD_INPUT_HANDLE)
     mov     rcx, STD_INPUT_HANDLE
     call    GetStdHandle
     mov     [rel hStdIn], rax
 
-    mov     rcx, [rel hStdIn]
-    mov     rdx, rbx
-    mov     r8,  rdi
-    lea     r9,  [rsp+32]
-    mov     qword [rsp+40], 0
+    ; ReadConsoleA(hStdIn, buf, capacity-1, &charsRead, NULL)
+    mov     rcx, [rel hStdIn]       ; hConsole
+    mov     rdx, rbx                ; lpBuffer
+    lea     r8,  [rdi-1]            ; nCharsToRead = capacity-1
+    lea     r9,  [rsp+24]           ; lpNumberOfCharsRead (inside shadow space)
+    mov     qword [rsp+32], 0       ; lpReserved = NULL (5th arg at [rsp+32])
     call    ReadConsoleA
 
-    mov     rsi, rbx
+    ; scan for '\r' and terminate
+    mov     rcx, [rsp+24]           ; rcx = chars read
+    mov     rsi, rbx                ; rsi = scan pointer
+
 .read_text_find_cr:
-    movzx   eax, byte [rsi]
-    test    al, al
+    test    rcx, rcx
     jz      .read_text_done
-    cmp     al, 0x0D
+    movzx   eax, byte [rsi]
+    cmp     al, 0x0D                ; '\r'
     je      .read_text_terminate
     inc     rsi
+    dec     rcx
     jmp     .read_text_find_cr
+
 .read_text_terminate:
-    mov     byte [rsi], 0
+    mov     byte [rsi], 0           ; null‑terminate at CR
+
 .read_text_done:
-    add     rsp, 48
+    add     rsp, 40
+    pop     rsi
     pop     rdi
     pop     rbx
     pop     rbp
     ret
+
 
 ; print_int(long long num) → rax
 ; rcx = signed 64-bit integer
@@ -464,7 +474,4 @@ int_to_str:
     pop     r13
     pop     r12
     pop     rbx
-    ret
-
-setup_signals:
     ret

@@ -105,12 +105,8 @@ static long prompt_num_async(void* arg) {
     int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
-        if (thread_stop) { return 0; }
-        while (*verified_ans!=0) {
-            if (thread_stop) { return 0; }
-        }
+        while (*verified_ans!=0) {}
         read_text(buf,sizeof(buf));
-        if (thread_stop) { return 0; }
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
         text_filled_buffer=has_newline(buf,sizeof(buf));
@@ -136,59 +132,53 @@ static long prompt_num_async(void* arg) {
         }
         *verified_ans=num_ans;
     }
-    return 0;
 }
 
-void prompt_new_crops(struct farm* farms,struct crop* crops) {
+void prompt_new_crops(struct farm* farms,struct crop* crops,int* ans) {
     void *prompt_thread,*button_thread;
     struct farm *farm_iter=farms;
-    int i,ans=0;
+    int i;
     char base_prompt[]="What crop to grow on farm _ (Crop ID): ";
 
     struct crop* crop_iter=crops;
 
     while (farm_iter!=NULL) {
-        ans=0;
         base_prompt[26]=farm_iter->name;
         print_text(base_prompt);
 
         gui_farm_minerals(farms,crops,farm_iter->name,farm_iter->name);
+        *ans=0;
 
-        prompt_thread=CreateThread(0,0,prompt_num_async,&ans,0,0);
-        button_thread=CreateThread(0,0,button_detect_async,&ans,0,0);
-
-        while (ans==0) {
-            gfx_present();
-            if (ans == 0) { continue; } /* skip mineral check if crop was invalid */
+        while (*ans==0) {
+            while (*ans==0) {
+                gfx_present();
+                button_detect(ans); /* skip mineral check if crop was invalid */
+            }
 
             crop_iter=crops;
-            if (ans<0) { /* GUI Selection to look at other farm info, but no action */
-                gui_farm_minerals(farms,crops,farm_iter->name,-ans);
-                ans=0;
+            if (*ans<0) { /* GUI Selection to look at other farm info, but no action */
+                gui_farm_minerals(farms,crops,farm_iter->name,-*ans);
+                *ans=0;
                 continue;
             }
-            for (i=1;i<ans;i++) {
+            for (i=1;i<*ans;i++) {
                 crop_iter=crop_iter->next_crop;
                 if (crop_iter==NULL) {
                     feedback_update("Num greater than crop count, not valid.\n");
-                    ans=0;
+                    *ans=0;
                     print_text(base_prompt);
                     break;
                 }
             }
             if (farm_iter->minerals[crop_iter->mineral_del]==0) {
                 feedback_update("Not enough minerals to grow crop.\n");
-                ans=0;
+                *ans=0;
                 print_text(base_prompt);
                 continue;
             }
         }
-        farm_iter->current_crop=ans-1;
+        farm_iter->current_crop=*ans-1;
         farm_iter=farm_iter->next_farm;
-        thread_stop=1;
-        TerminateReadThread(prompt_thread,0);
-        TerminateThread(button_thread,0);
-        thread_stop=0;
         free_buttons();
     }
 }
@@ -224,28 +214,26 @@ int expenses_effects(struct farm* farms) {
     return cost_acc;
 }
 
-void purchase_items(struct farm** farms,int* money) {
+void purchase_items(struct farm** farms,int* money,int* ans) {
     void *prompt_thread,*button_thread;
-    int ans=0;
     char* base_prompt="1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
     print_text("Money: $");print_int(*money);print_text("\n");
 
     gui_purchase_items_setup();
-
     print_text(base_prompt);
-    prompt_thread=CreateThread(0,0,prompt_num_async,&ans,0,0);
-    button_thread=CreateThread(0,0,button_detect_async,&ans,0,0);
+    *ans=0;
 
-    while (ans==0) {
+    while (*ans==0) {
         gfx_present();
+        button_detect(ans);
 
-        switch (ans) {
+        switch (*ans) {
             case 0: { break; } /* no answer given yet. Keep looping */
             case 1: { break; }
             case 2: {
                 if(*money<50) {
                     feedback_update("Do not have enough money ($50).\n");
-                    ans=0;
+                    *ans=0;
                     print_text(base_prompt);
                     continue;
                 }
@@ -258,7 +246,7 @@ void purchase_items(struct farm** farms,int* money) {
             case 3: {
                 if((*farms)->next_farm==NULL) {
                     feedback_update("You only have one farm, there are no excess to sell.\n");
-                    ans=0;
+                    *ans=0;
                     print_text(base_prompt);
                     continue;
                 }
@@ -270,16 +258,12 @@ void purchase_items(struct farm** farms,int* money) {
             }
             default: {
                 feedback_update("Num too large.\n");
-                ans=0;
+                *ans=0;
                 print_text(base_prompt);
                 continue;
             }
         }
     }
-    thread_stop=1;
-    TerminateReadThread(prompt_thread,0);
-    TerminateThread(button_thread,0);
-    thread_stop=0;
     free_buttons();
 }
 

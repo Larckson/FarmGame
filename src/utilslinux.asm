@@ -15,11 +15,6 @@ global text_to_int
 global has_newline
 global int_to_str
 
-global setup_signals
-
-%define SYS_SIGACTION 13
-%define SIGUSR1       10
-
 ; ─────────────────────────────────────────────────────────────────
 ; LINUX SYSCALL NUMBERS (x86-64)
 ; ─────────────────────────────────────────────────────────────────
@@ -450,51 +445,4 @@ int_to_str:
     pop     r13
     pop     r12
     pop     rbx
-    ret
-
-; no-op signal handler
-sigusr1_handler:
-    ret
-
-; robust setup_signals - zero buffer, install no-op handler, check syscall result
-section .data
-sig_setup_fail_msg: db "setup_signals: sigaction failed", 10, 0
-
-section .text
-global setup_signals
-
-setup_signals:
-    ; zero sigaction_buf (32 bytes)
-    lea     rax, [rel sigaction_buf]
-    xor     rcx, rcx
-.zero_loop:
-    mov     byte [rax + rcx], 0
-    inc     rcx
-    cmp     rcx, 32
-    jb      .zero_loop
-
-    ; fill sigaction_buf
-    lea     rcx, [rel sigusr1_handler]
-    mov     [rax], rcx        ; sa_handler (offset 0)
-    mov     qword [rax + 8], 0    ; sa_flags = 0 (no SA_RESTART)
-    mov     qword [rax + 16], 0   ; sa_restorer = NULL
-    mov     qword [rax + 24], 0   ; sa_mask = 0
-
-    ; syscall: rt_sigaction(SIGUSR1, &sigaction_buf, NULL, sizeof(sigset_t))
-    mov     rax, SYS_SIGACTION
-    mov     rdi, SIGUSR1
-    lea     rsi, [rel sigaction_buf]
-    xor     rdx, rdx
-    mov     r10, 8
-    syscall
-
-    ; check return value (rax == 0 on success)
-    test    rax, rax
-    jz      .setup_done
-
-    ; on error, print a diagnostic (non-fatal) so you can see failure under gdb/run
-    lea     rdi, [rel sig_setup_fail_msg]
-    call    print_text
-
-.setup_done:
     ret
