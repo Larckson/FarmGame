@@ -127,7 +127,7 @@ struct fat_header {
     uint64_t linux_size;
 };
 
-int main2(int argc, char **argv) {
+int main(int argc, char **argv) {
     size_t lin_sz, win_sz;
     size_t top_a_len, top_b_len, mid_len, b64_sz;
     uint64_t linux_offset, linux_size;
