@@ -10,79 +10,13 @@ extern void int_to_str(int num,char* buf);
 #endif
 #include "initfarmsetup.c"
 
-#ifdef _WIN32
-
-    void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
-
-#else
-/* --- Linux syscalls (no pthreads, no libc dependency required) --- */
-extern long clone(long (*fn)(void *),void *stack,int flags,void *arg);
-extern int tgkill(int tgid,int tid,int sig);
-extern int getpid(void);
-extern int gettid(void);
-extern void *mmap(void*,unsigned long,int,int,int,long);
-
-#define PROT_READ       0x1
-#define PROT_WRITE      0x2
-#define MAP_PRIVATE     0x02
-#define MAP_ANONYMOUS   0x20
-#define MAP_STACK       0x20000
-#define MAP_FAILED      ((void *)-1)
-#define STACK_SIZE      524288
-#define SIGUSR1         10
-
-/* clone flags: thread-like behavior */
-#define CLONE_FLAGS ( \
-    0x00000100 |  /* CLONE_VM       - share memory space    */ \
-    0x00000200 |  /* CLONE_FS       - share filesystem info */ \
-    0x00000400 |  /* CLONE_FILES    - share file descriptors*/ \
-    0x00000800 |  /* CLONE_SIGHAND  - share signal handlers */ \
-    0x00010000 |  /* CLONE_THREAD   - same thread group     */ \
-    0x80000000 )  /* CLONE_IO       - share IO context      */
-
-/* --- CreateThread replacement --- */
-static void *CreateThread(void *lpThreadAttributes,
-                          unsigned long dwStackSize,
-                          long (*lpStartAddress)(void *),
-                          void *lpParameter,
-                          unsigned long dwCreationFlags,
-                          unsigned long *lpThreadId)
-{
-    (void)lpThreadAttributes;
-    (void)dwStackSize;
-    (void)dwCreationFlags;
-
-    char *stack = (char *)mmap((void*)0, STACK_SIZE,
-                               PROT_READ | PROT_WRITE,
-                               MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
-                               -1, 0);
-    if (stack == MAP_FAILED)
-        return (void *)-1;
-
-    /* compute 16-byte aligned stack top */
-    unsigned long stack_top = (unsigned long)(stack + STACK_SIZE);
-    stack_top &= ~0xFUL; /* align down to 16 */
-
-    long tid = clone(lpStartAddress,
-                     (void*)stack_top,
-                     CLONE_FLAGS,
-                     lpParameter);
-
-    if (lpThreadId)
-        *lpThreadId = (unsigned long)tid;
-
-    return (void*)(long)tid;
-}
-
-#endif
-
 struct button {
     int left_x,top_y,right_x,bot_y;
     struct button* next_button;
     int user_input;
 };
 
-struct button* but_iter=NULL;
+struct button* but_iter=NULL; /* circular linked list */
 
 void gfx_put_pixel(int x,int y,unsigned int color) {
     frame_buffer[y*SCREENW+x]=color;
@@ -214,7 +148,7 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
 void free_buttons() {
     struct button *but_head=but_iter;
     struct button *next;
-    if (but_iter==NULL) { return; }
+    if (but_iter==NULL) { return; } /* they closed the GUI */
     do {
         next=but_iter->next_button;
         mem_free(but_iter);
@@ -254,9 +188,11 @@ void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_s
     if (!gfx_present()) { return; }
     gfx_clear(15);
 
+    /* border around farm view window and buttons on top */
     gfx_rect(button_x,70,700,500,WHITE);
     while (farm_iter!=NULL) {
         if (farm_iter->name == farm_view) {
+            /* bars showing minerals on farm */
             for (n=0;n<MINERALCOUNT;n++) {
                 bar_height=15*(farm_iter->minerals[n]);
                 gfx_rect_hatch(n*20+80,250-bar_height,10,bar_height,mineral_colors[n],4);
@@ -264,6 +200,7 @@ void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_s
                 gfx_draw_string(n*20+80,252,mineral_names[n],mineral_colors[n]);
             }
 
+            /* outer border and tick marks */
             gfx_draw_string(50,75,"Minerals",WHITE);
             gfx_rect(50,85,MINERALCOUNT*20+30,165,WHITE);
             for (n=1;n<=5;n++) {
@@ -272,6 +209,7 @@ void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_s
                 gfx_draw_char(gfx_draw_string(50,240-30*n,num_buf,WHITE),240-30*n,'%',WHITE);
             }
 
+            /* Crop Info Table */
             n=0;
             gfx_draw_string(300,90,farm_select==farm_view?"Choose to Plant:":"Crop Name:",WHITE);
             gfx_draw_string(450,90,"Add:",WHITE);
@@ -283,9 +221,13 @@ void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_s
                 } else {
                     gfx_draw_string(300,100+40*n,crop_iter->name,WHITE);
                 }
+
                 gfx_draw_string(gfx_draw_char(450,100+40*n,'^',WHITE),100+40*n,mineral_names[crop_iter->mineral_add],mineral_colors[crop_iter->mineral_add]);
+
                 gfx_draw_string(gfx_draw_char(500,100+40*n,'v',WHITE),100+40*n,mineral_names[crop_iter->mineral_del],mineral_colors[crop_iter->mineral_del]);
+
                 int_to_str(crop_iter->price,num_buf);gfx_draw_string(gfx_draw_char(550,100+40*n,'$',WHITE),100+40*n,num_buf,WHITE);
+
                 crop_iter=crop_iter->next_crop;
                 n++;
             }
@@ -293,6 +235,7 @@ void gui_farm_minerals(struct farm* farm_iter,struct crop* crop_iter,char farm_s
 
         full_farm_name[5]=farm_iter->name;
         add_button(button_x,40,100,30,full_farm_name,farm_iter->name,1,farm_iter->name==farm_view);
+
         farm_iter=farm_iter->next_farm;
         button_x+=100;
     }

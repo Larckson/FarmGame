@@ -1,11 +1,9 @@
 #include "adjustfarmsetup.c"
+
 extern unsigned long get_time();
 extern void set_rand(unsigned long seed);
 
-/* kljfklsjdfl */
-
 int main() {
-    /* kljsdfs */
     int year,money=50,ans=5;
     CreateThread(0,0,prompt_num_async,&ans,0,0);
     struct crop* crops=create_initial_crops();

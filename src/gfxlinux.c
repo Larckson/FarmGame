@@ -27,6 +27,64 @@ extern int abs_val(int x);
 extern void mem_set(void *dst, int val, unsigned int n);
 
 /* ── internal state ──────────────────────────────────────────────────────── */
+extern long clone(long (*fn)(void *),void *stack,int flags,void *arg);
+extern int tgkill(int tgid,int tid,int sig);
+extern int getpid(void);
+extern int gettid(void);
+extern void *mmap(void*,unsigned long,int,int,int,long);
+
+#define PROT_READ       0x1
+#define PROT_WRITE      0x2
+#define MAP_PRIVATE     0x02
+#define MAP_ANONYMOUS   0x20
+#define MAP_STACK       0x20000
+#define MAP_FAILED      ((void *)-1)
+#define STACK_SIZE      524288
+#define SIGUSR1         10
+
+/* clone flags: thread-like behavior */
+#define CLONE_FLAGS ( \
+    0x00000100 |  /* CLONE_VM       - share memory space    */ \
+    0x00000200 |  /* CLONE_FS       - share filesystem info */ \
+    0x00000400 |  /* CLONE_FILES    - share file descriptors*/ \
+    0x00000800 |  /* CLONE_SIGHAND  - share signal handlers */ \
+    0x00010000 |  /* CLONE_THREAD   - same thread group     */ \
+    0x80000000 )  /* CLONE_IO       - share IO context      */
+
+/* --- CreateThread replacement --- */
+static void *CreateThread(void *lpThreadAttributes,
+                          unsigned long dwStackSize,
+                          long (*lpStartAddress)(void *),
+                          void *lpParameter,
+                          unsigned long dwCreationFlags,
+                          unsigned long *lpThreadId)
+{
+    (void)lpThreadAttributes;
+    (void)dwStackSize;
+    (void)dwCreationFlags;
+
+    char *stack = (char *)mmap((void*)0, STACK_SIZE,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+                               -1, 0);
+    if (stack == MAP_FAILED)
+        return (void *)-1;
+
+    /* compute 16-byte aligned stack top */
+    unsigned long stack_top = (unsigned long)(stack + STACK_SIZE);
+    stack_top &= ~0xFUL; /* align down to 16 */
+
+    long tid = clone(lpStartAddress,
+                     (void*)stack_top,
+                     CLONE_FLAGS,
+                     lpParameter);
+
+    if (lpThreadId)
+        *lpThreadId = (unsigned long)tid;
+
+    return (void*)(long)tid;
+}
+
 unsigned int *frame_buffer = 0;
 
 static Display     *g_display  = 0;

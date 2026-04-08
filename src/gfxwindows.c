@@ -67,6 +67,7 @@ struct winuser_thread_msg { /* MSG */
 };
 
 /* Win32 imports (-lgdi32 -luser32 in linker settings) */
+extern void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
 extern void * __stdcall RegisterClassExA(const struct wind_class *);
 extern void * __stdcall CreateWindowExA(unsigned int,const char*,const char*,unsigned int,int,int,int,int,void*,void*,void*,void*);
 extern int    __stdcall AdjustWindowRect(struct rect*,unsigned int,int);

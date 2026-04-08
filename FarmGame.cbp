@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/farmgame" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/FarmGame" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -82,7 +82,7 @@
 			<Option compilerVar="CC" />
 			<Option link="0" />
 			<Option weight="70" />
-			<Option compiler="gcc" use="1" buildCommand="comiplehelpers\wslbuild.bat $file obj/Debug/main $object" />
+			<Option compiler="gcc" use="1" buildCommand="compilehelpers\wslbuild.bat $file obj/Debug/main $object" />
 		</Unit>
 		<Unit filename="src/utilslinux.asm">
 			<Option compilerVar="CC" />

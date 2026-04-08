@@ -105,7 +105,7 @@ static long prompt_num_async(void* arg) {
     int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
-        while (*verified_ans!=0) {}
+        while (*verified_ans!=0) { }
         read_text(buf,sizeof(buf));
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
@@ -132,6 +132,7 @@ static long prompt_num_async(void* arg) {
         }
         *verified_ans=num_ans;
     }
+    return 0;
 }
 
 void prompt_new_crops(struct farm* farms,struct crop* crops,int* ans) {
