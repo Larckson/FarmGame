@@ -635,3 +635,5 @@ u64_to_dec_left:
     add     rsp, 48
     pop     rbp
     ret
+
+section .note.GNU-stack noalloc noexec nowrite progbits
