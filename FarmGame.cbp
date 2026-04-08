@@ -48,6 +48,11 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
+		<Unit filename="src/fileswindows.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="src/gfx.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
@@ -68,17 +73,16 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="src/main.c">
-			<Option compilerVar="CC" />
-			<Option link="0" />
-			<Option weight="60" />
-			<Option compiler="gcc" use="1" buildCommand="wslbuild.bat $file obj/Debug/main $object" />
-		</Unit>
 		<Unit filename="src/pack.c">
 			<Option compilerVar="CC" />
 			<Option link="0" />
-			<Option weight="100" />
-			<Option compiler="gcc" use="1" buildCommand='gcc -std=c90 &quot;$file&quot; -o obj\Debug\pack.exe' />
+			<Option compiler="gcc" use="1" buildCommand='gcc -std=c90 &quot;$file&quot; &quot;obj\Debug\utilswindows.obj&quot; -o obj\Debug\pack.exe' />
+		</Unit>
+		<Unit filename="src/startgame.c">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option weight="70" />
+			<Option compiler="gcc" use="1" buildCommand="comiplehelpers\wslbuild.bat $file obj/Debug/main $object" />
 		</Unit>
 		<Unit filename="src/utilslinux.asm">
 			<Option compilerVar="CC" />

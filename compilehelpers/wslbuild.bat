@@ -1,4 +1,3 @@
-@echo off
 set WINPATH=%1
 set OUTPATH=%2
 set WINOUT=%3

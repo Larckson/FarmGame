@@ -22,6 +22,10 @@ global set_rand
 global text_to_int
 global has_newline
 global int_to_str
+global my_strlen
+global my_strstr
+global my_memcpy
+global u64_to_dec_left
 
 ; ─────────────────────────────────────────────────────────────────
 ; CONSTANTS
@@ -475,3 +479,197 @@ int_to_str:
     pop     r12
     pop     rbx
     ret
+
+;my_strlen
+
+my_strlen:
+    ; RCX = s
+    xor     rax, rax        ; n = 0
+
+.len_loop:
+    mov     dl, [rcx + rax] ; load byte s[n]
+    test    dl, dl          ; is it zero?
+    jz      .done           ; if zero, return n
+    inc     rax             ; n++
+    jmp     .len_loop
+
+.done:
+    ret
+
+    ; ================================================================
+; char* my_strstr(char* h, const char* n)
+;   RCX = h
+;   RDX = n
+; returns:
+;   RAX = pointer to first occurrence or 0
+; calls:
+;   my_strlen (same ABI)
+; clobbers:
+;   RAX, R8, R9, R10, R11
+; ================================================================
+
+my_strstr:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+
+    mov     r12, rcx        ; h
+    mov     r13, rdx        ; n
+
+    ; hl = my_strlen(h)
+    mov     rcx, r12
+    call    my_strlen
+    mov     r8, rax         ; hl
+
+    ; nl = my_strlen(n)
+    mov     rcx, r13
+    call    my_strlen
+    mov     r9, rax         ; nl
+
+    cmp     r9, r8
+    ja      .not_found
+
+    xor     r10, r10        ; i = 0
+    mov     r11, r8
+    sub     r11, r9         ; hl - nl
+
+.outer_loop:
+    cmp     r10, r11
+    ja      .not_found
+
+    xor     rbx, rbx        ; j = 0
+
+.inner_loop:
+    cmp     rbx, r9
+    jae     .match
+
+    mov     r14, r10
+    add     r14, rbx
+
+    mov     al, [r12 + r14] ; h[i+j]
+    mov     dl, [r13 + rbx] ; n[j]
+    cmp     al, dl
+    jne     .next_i
+
+    inc     rbx
+    jmp     .inner_loop
+
+.match:
+    lea     rax, [r12 + r10]
+    jmp     .done
+
+.next_i:
+    inc     r10
+    jmp     .outer_loop
+
+.not_found:
+    xor     rax, rax
+
+.done:
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; ================================================================
+; my_memcpy - Windows x64
+; void* my_memcpy(void* dst, const void* src, unsigned long n)
+;   RCX = dst
+;   RDX = src
+;   R8  = n
+; returns:
+;   RAX = dst
+; ================================================================
+
+my_memcpy:
+    ; save dst for return
+    mov     rax, rcx        ; rax = dst
+    test    r8, r8          ; n == 0 ?
+    jz      .done
+
+.copy_loop:
+    mov     al, [rdx]       ; use al instead of dl
+    mov     [rcx], al
+    inc     rcx
+    inc     rdx
+    dec     r8
+    jnz     .copy_loop
+
+.done:
+    ret
+
+    ; ================================================================
+; void u64_to_dec_left(char* out, unsigned long long v)
+;   RCX = out
+;   RDX = v
+; ================================================================
+
+u64_to_dec_left:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 48             ; space for tmp[32] and some slack
+
+    mov     r8, rcx             ; r8 = out
+    mov     rax, rdx            ; rax = v
+    xor     r9d, r9d            ; i = 0
+
+    ; tmp base at [rbp-32]
+    lea     r10, [rbp - 32]     ; r10 = &tmp[0]
+
+    ; if (v == 0) { tmp[i++] = '0'; }
+    test    rax, rax
+    jnz     .conv_loop
+
+    mov     byte [r10], '0'
+    inc     r9d
+    jmp     .have_digits
+
+.conv_loop:
+    ; while (v && i < 31)
+    cmp     r9d, 31
+    jae     .have_digits
+    test    rax, rax
+    jz      .have_digits
+
+    xor     rdx, rdx
+    mov     rcx, 10
+    div     rcx                 ; rax = v / 10, rdx = v % 10
+
+    add     dl, '0'
+    mov     [r10 + r9], dl      ; tmp[i] = digit
+    inc     r9d
+    jmp     .conv_loop
+
+.have_digits:
+    ; len = i
+    mov     r11d, r9d           ; len = i
+    xor     r12d, r12d          ; j = 0
+
+.rev_loop:
+    cmp     r12d, r11d
+    jae     .pad_spaces
+
+    mov     edx, r11d
+    dec     edx                 ; len - 1
+    sub     edx, r12d           ; len - 1 - j
+    mov     bl, [r10 + rdx]     ; tmp[len-1-j]
+    mov     [r8 + r12], bl      ; out[j] = ...
+    inc     r12d
+    jmp     .rev_loop
+
+.pad_spaces:
+    ; while (j < 11) out[j++] = ' ';
+    cmp     r12d, 11
+    jae     .done
+
+    mov     byte [r8 + r12], ' '
+    inc     r12d
+    jmp     .pad_spaces
+
+.done:
+    add     rsp, 48
+    pop     rbp
+    ret
+

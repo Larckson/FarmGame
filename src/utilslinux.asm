@@ -14,6 +14,10 @@ global set_rand
 global text_to_int
 global has_newline
 global int_to_str
+global my_strlen
+global my_strstr
+global my_memcpy
+global u64_to_dec_left
 
 ; ─────────────────────────────────────────────────────────────────
 ; LINUX SYSCALL NUMBERS (x86-64)
@@ -445,4 +449,189 @@ int_to_str:
     pop     r13
     pop     r12
     pop     rbx
+    ret
+
+;my_strlen
+my_strlen:
+    ; RDI = pointer to string
+    xor     rax, rax        ; n = 0
+
+.len_loop:
+    mov     dl, [rdi + rax] ; load byte s[n]
+    test    dl, dl          ; zero?
+    jz      .done
+    inc     rax
+    jmp     .len_loop
+
+.done:
+    ret
+
+; ================================================================
+; char* my_strstr(char* h, const char* n)
+;   RDI = h
+;   RSI = n
+; returns:
+;   RAX = pointer to first occurrence or 0
+; calls:
+;   my_strlen (SysV ABI)
+; ================================================================
+
+my_strstr:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+
+    mov     r12, rdi        ; h
+    mov     r13, rsi        ; n
+
+    ; hl = my_strlen(h)
+    mov     rdi, r12
+    call    my_strlen
+    mov     r8, rax         ; hl
+
+    ; nl = my_strlen(n)
+    mov     rdi, r13
+    call    my_strlen
+    mov     r9, rax         ; nl
+
+    cmp     r9, r8
+    ja      .not_found
+
+    xor     r10, r10        ; i = 0
+    mov     r11, r8
+    sub     r11, r9         ; hl - nl
+
+.outer_loop:
+    cmp     r10, r11
+    ja      .not_found
+
+    xor     rbx, rbx        ; j = 0
+
+.inner_loop:
+    cmp     rbx, r9
+    jae     .match
+
+    ; r14 = i + j
+    mov     r14, r10
+    add     r14, rbx
+
+    mov     al, [r12 + r14] ; h[i+j]
+    mov     dl, [r13 + rbx] ; n[j]
+    cmp     al, dl
+    jne     .next_i
+
+    inc     rbx
+    jmp     .inner_loop
+
+.match:
+    lea     rax, [r12 + r10]
+    jmp     .done
+
+.next_i:
+    inc     r10
+    jmp     .outer_loop
+
+.not_found:
+    xor     rax, rax
+
+.done:
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+    ; ================================================================
+; my_memcpy - Linux x86-64 (System V)
+; void* my_memcpy(void* dst, const void* src, unsigned long n)
+;   RDI = dst
+;   RSI = src
+;   RDX = n
+; returns:
+;   RAX = dst
+; ================================================================
+
+my_memcpy:
+    mov     rax, rdi        ; rax = dst
+    test    rdx, rdx        ; n == 0 ?
+    jz      .done
+
+.copy_loop:
+    mov     cl, [rsi]       ; load *src
+    mov     [rdi], cl       ; store to *dst
+    inc     rdi
+    inc     rsi
+    dec     rdx
+    jnz     .copy_loop
+
+.done:
+    ret
+
+    ; ================================================================
+; void u64_to_dec_left(char* out, unsigned long long v)
+;   RDI = out
+;   RSI = v
+; ================================================================
+
+u64_to_dec_left:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 48             ; space for tmp[32] etc.
+
+    mov     r8, rdi             ; r8 = out
+    mov     rax, rsi            ; rax = v
+    xor     r9d, r9d            ; i = 0
+
+    lea     r10, [rbp - 32]     ; tmp base
+
+    test    rax, rax
+    jnz     .conv_loop
+
+    mov     byte [r10], '0'
+    inc     r9d
+    jmp     .have_digits
+
+.conv_loop:
+    cmp     r9d, 31
+    jae     .have_digits
+    test    rax, rax
+    jz      .have_digits
+
+    xor     rdx, rdx
+    mov     rcx, 10
+    div     rcx                 ; rax = v / 10, rdx = v % 10
+
+    add     dl, '0'
+    mov     [r10 + r9], dl
+    inc     r9d
+    jmp     .conv_loop
+
+.have_digits:
+    mov     r11d, r9d           ; len = i
+    xor     r12d, r12d          ; j = 0
+
+.rev_loop:
+    cmp     r12d, r11d
+    jae     .pad_spaces
+
+    mov     edx, r11d
+    dec     edx
+    sub     edx, r12d
+    mov     bl, [r10 + rdx]
+    mov     [r8 + r12], bl
+    inc     r12d
+    jmp     .rev_loop
+
+.pad_spaces:
+    cmp     r12d, 11
+    jae     .done
+
+    mov     byte [r8 + r12], ' '
+    inc     r12d
+    jmp     .pad_spaces
+
+.done:
+    add     rsp, 48
+    pop     rbp
     ret
