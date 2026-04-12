@@ -1,0 +1,1 @@
+powershell -NoProfile -Command "$f=[System.IO.File]::OpenRead('%~f0');$f.Seek(B64_OFF____,0)|Out-Null;$b=[byte[]]::new(B64_SZ_____);$f.Read($b,0,B64_SZ_____)|Out-Null;$f.Close();[System.IO.File]::WriteAllBytes('%TMP_B64%',$b)"

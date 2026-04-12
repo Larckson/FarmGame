@@ -18,14 +18,15 @@ int main(int argc,char** argv) {
     unsigned char* lin_buf;
     unsigned char* win_buf;
 
-    char *sh,*cmd_a,*ps,*cmd_b;
-    unsigned long sh_len,cmd_a_len,ps_len,cmd_b_len;
+    char *sh,*cmd_a,*cmd_c,*cmd_b;
+    unsigned long sh_len,cmd_a_len,cmd_c_len,cmd_b_len;
 
     char *top_a,*top_b;
     unsigned long top_a_len,top_b_len;
 
     unsigned long b64_sz;
     unsigned long long linux_offset;
+    unsigned long long b64_offset;
 
     struct fat_header hdr;
 
@@ -37,10 +38,10 @@ int main(int argc,char** argv) {
     /* load pure-language script files */
     sh=load_text_file(".\\compilehelpers\\header1.sh",&sh_len);
     cmd_a=load_text_file(".\\compilehelpers\\header2.cmd",&cmd_a_len);
-    ps=load_text_file(".\\compilehelpers\\header3.ps1",&ps_len);
+    cmd_c=load_text_file(".\\compilehelpers\\header3.cmd",&cmd_c_len);
     cmd_b=load_text_file(".\\compilehelpers\\header4.cmd",&cmd_b_len);
 
-    if (!sh||!cmd_a||!ps||!cmd_b) {
+    if (!sh||!cmd_a||!cmd_c||!cmd_b) {
         print_text("Error loading script files\n");
         return 1;
     }
@@ -103,25 +104,13 @@ int main(int argc,char** argv) {
     /* ─────────────────────────────────────────────────────────── */
 
     {
-        const char* ps_cmd="powershell -NoProfile -Command \"";
-        const char* end_quote="\"\n";
-
-        unsigned long ps_cmd_len=my_strlen(ps_cmd);
-        unsigned long end_quote_len=my_strlen(end_quote);
-
-        top_b_len=ps_cmd_len+ps_len+end_quote_len+cmd_b_len;
+        top_b_len=cmd_c_len+cmd_b_len;
         top_b=(char*)mem_alloc(top_b_len+1);
 
         unsigned long pos=0;
 
-        my_memcpy(top_b+pos,ps_cmd,ps_cmd_len);
-        pos+=ps_cmd_len;
-
-        my_memcpy(top_b+pos,ps,ps_len);
-        pos+=ps_len;
-
-        my_memcpy(top_b+pos,end_quote,end_quote_len);
-        pos+=end_quote_len;
+        my_memcpy(top_b+pos,cmd_c,cmd_c_len);
+        pos+=cmd_c_len;
 
         my_memcpy(top_b+pos,cmd_b,cmd_b_len);
         pos+=cmd_b_len;
@@ -134,11 +123,11 @@ int main(int argc,char** argv) {
     /* Load binaries                                                */
     /* ─────────────────────────────────────────────────────────── */
 
-    hlin=CreateFileA(argv[1],0x80000000UL,1,/* GENERIC_READ,FILE_SHARE_READ */
-                       0,3,0x80,0);/*OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL*/
+    hlin=CreateFileA(argv[1],0x80000000UL,1,
+                       0,3,0x80,0);
 
-    hwin=CreateFileA(argv[2],0x80000000UL,1,/* GENERIC_READ,FILE_SHARE_READ */
-                       0,3,0x80,0);/*OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL*/
+    hwin=CreateFileA(argv[2],0x80000000UL,1,
+                       0,3,0x80,0);
 
     if (!hlin||!hwin) {
         print_text("Error opening input binaries\n");
@@ -162,7 +151,8 @@ int main(int argc,char** argv) {
 
     /* compute offsets */
     b64_sz=b64_encoded_size((unsigned long)win_sz);
-    linux_offset=top_a_len+top_b_len+11+b64_sz+9+20;
+    b64_offset=top_a_len+top_b_len+11; /* 11 = len(":BEGIN_B64\n") */
+    linux_offset=b64_offset+b64_sz+9+20; /* 9=":END_B64\n" 20=": BINARY_DATA_BELOW\n" */
 
     /* patch placeholders */
     {
@@ -178,10 +168,25 @@ int main(int argc,char** argv) {
         if (!p) { print_text("Missing LINUX_SZ___\n"); return 1; }
         u64_to_dec_left(tmp,lin_sz);
         my_memcpy(p,tmp,11);
+
+        p=my_strstr(top_b,"B64_OFF____");
+        if (!p) { print_text("Missing B64_OFF____\n"); return 1; }
+        u64_to_dec_left(tmp,b64_offset);
+        my_memcpy(p,tmp,11);
+
+        p=my_strstr(top_b,"B64_SZ_____");
+        if (!p) { print_text("Missing B64_SZ_____\n"); return 1; }
+        u64_to_dec_left(tmp,b64_sz);
+        my_memcpy(p,tmp,11);
+
+        p=my_strstr(top_b,"B64_SZ_____");
+        if (!p) { print_text("Missing B64_SZ_____\n"); return 1; }
+        u64_to_dec_left(tmp,b64_sz);
+        my_memcpy(p,tmp,11);
     }
 
     /* open output */
-    hout=CreateFileA(argv[3],0x40000000UL,0,/* GENERIC_WRITE */
+    hout=CreateFileA(argv[3],0x40000000UL,0,
                        0,2,0x80,0);
 
     if (!hout) {
